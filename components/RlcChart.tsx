@@ -18,7 +18,7 @@ import type { ReactanceSweep } from "@/lib/rlc";
 ChartJS.register(LogarithmicScale, LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
 
 // Colors follow the whiteboard sketch's own convention (red = Xc, blue =
-// XL), not a generic categorical palette -- the mapping is the whole point
+// XL), not a generic categorical palette; the mapping is the whole point
 // of the chart, so it stays fixed rather than being reassigned.
 const XC_COLOR = "#e5484d";
 const XL_COLOR = "#3b82f6";

@@ -1,5 +1,5 @@
 // Core series-RLC math: reactance formulas, resonant frequency, unit tables,
-// and Excel-backed presets. Pure functions -- no React/DOM here, so the
+// and Excel-backed presets. Pure functions with no React/DOM here, so the
 // numbers can be unit-tested or reused outside the chart component.
 
 export type UnitMap = Record<string, number>;
@@ -58,12 +58,12 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-/** f0 = 1 / (2*pi*sqrt(L*C)) -- the frequency where XL = Xc. */
+/** f0 = 1 / (2*pi*sqrt(L*C)): the frequency where XL = Xc. */
 export function resonantFreq(L: number, C: number): number {
   return 1 / (2 * Math.PI * Math.sqrt(L * C));
 }
 
-/** Zo = sqrt(L/C) -- the reactance value both curves share at resonance. */
+/** Zo = sqrt(L/C): the reactance value both curves share at resonance. */
 export function characteristicImpedance(L: number, C: number): number {
   return Math.sqrt(L / C);
 }

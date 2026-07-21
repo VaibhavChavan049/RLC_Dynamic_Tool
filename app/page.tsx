@@ -50,8 +50,8 @@ export default function Home() {
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <h1>Series RLC Tank -- Resonant Frequency Calculator</h1>
-          <p>Enter L, C, R in any unit -- or load an Excel-verified preset -- and see the Xc/XL crossing chart update instantly.</p>
+          <h1>Series RLC Tank: Resonant Frequency Calculator</h1>
+          <p>Enter L, C, R in any unit, or load an Excel-verified preset, and see the Xc/XL crossing chart update instantly.</p>
         </div>
 
         <div className={styles.layout}>
