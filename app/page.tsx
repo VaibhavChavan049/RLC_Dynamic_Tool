@@ -12,8 +12,8 @@ import {
   characteristicImpedance,
 } from "@/lib/rlc";
 
-// Chart.js touches the DOM/canvas, so it must only run in the browser --
-// load it client-side only and skip server-side rendering for it.
+// Chart.js touches the DOM/canvas, so it must only run in the browser.
+// Load it client-side only and skip server-side rendering for it.
 const RlcChart = dynamic(() => import("@/components/RlcChart"), { ssr: false });
 
 type Mode = "manual" | "preset";
@@ -50,7 +50,13 @@ export default function Home() {
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <div className={styles.kicker}>DRF Engineering Services</div>
+          <div className={styles.brandRow}>
+            <div className={styles.logoWrap}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/drf-logo.png" alt="DRF Engineering Services" className={styles.logo} />
+            </div>
+            <div className={styles.tagline}>DRF Engineering Services, LLC. Champions of Power</div>
+          </div>
           <h1>Series RLC Tank: Resonant Frequency Calculator</h1>
           <p>Enter L, C, R in any unit and see the Xc/XL crossing chart update instantly.</p>
         </div>
