@@ -65,12 +65,14 @@ export default function Home() {
               >
                 Enter my own values
               </button>
+              {/* Preset picker disabled for now, re-enable by uncommenting this button.
               <button
                 className={mode === "preset" ? styles.active : undefined}
                 onClick={() => setMode("preset")}
               >
                 Load a preset
               </button>
+              */}
             </div>
 
             {mode === "manual" ? (
