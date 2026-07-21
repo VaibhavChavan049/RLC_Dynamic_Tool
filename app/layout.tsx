@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RLC Resonant Frequency Calculator",
+  title: "RLC Resonant Frequency Calculator | DRF Engineering Services",
   description: "Series RLC tank Xc/XL resonance chart. Enter L, C, R and see the resonant frequency instantly.",
 };
 

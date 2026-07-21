@@ -50,8 +50,9 @@ export default function Home() {
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.header}>
+          <div className={styles.kicker}>DRF Engineering Services</div>
           <h1>Series RLC Tank: Resonant Frequency Calculator</h1>
-          <p>Enter L, C, R in any unit, or load an Excel-verified preset, and see the Xc/XL crossing chart update instantly.</p>
+          <p>Enter L, C, R in any unit and see the Xc/XL crossing chart update instantly.</p>
         </div>
 
         <div className={styles.layout}>
@@ -170,7 +171,7 @@ export default function Home() {
 
           <div className={styles.main}>
             <div className={styles.metrics}>
-              <div className={styles.metricCard}>
+              <div className={styles.metricCardHighlight}>
                 <div className={styles.metricLabel}>Resonant frequency f0</div>
                 <div className={styles.metricValue}>{sweep.f0.toLocaleString(undefined, { maximumFractionDigits: 4 })} Hz</div>
               </div>
