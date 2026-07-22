@@ -14,6 +14,7 @@ import {
 import annotationPlugin from "chartjs-plugin-annotation";
 import { Line } from "react-chartjs-2";
 import type { ReactanceSweep } from "@/lib/rlc";
+import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 
 ChartJS.register(LogarithmicScale, LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
 
@@ -23,7 +24,8 @@ ChartJS.register(LogarithmicScale, LinearScale, PointElement, LineElement, Toolt
 const XC_COLOR = "#e5484d";
 const XL_COLOR = "#3b82f6";
 const RESONANT_COLOR = "#2f9e58";
-const GRID_COLOR = "rgba(128, 128, 128, 0.18)";
+const MAJOR_GRID_COLOR = "rgba(128, 128, 128, 0.4)";
+const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
 interface Props {
@@ -70,20 +72,31 @@ export default function RlcChart({ sweep, logY = false }: Props) {
       scales: {
         x: {
           type: "logarithmic",
+          afterBuildTicks: buildLogGraphPaperTicks,
           title: { display: true, text: "Frequency [Hz] (log scale)", color: AXIS_TEXT_COLOR },
-          grid: { color: GRID_COLOR },
-          ticks: { color: AXIS_TEXT_COLOR },
-        },
-        y: {
-          type: logY ? "logarithmic" : "linear",
-          title: {
-            display: true,
-            text: logY ? "Impedance [Ω] (log scale)" : "Impedance [Ω]",
-            color: AXIS_TEXT_COLOR,
+          grid: {
+            color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR),
+            lineWidth: logGridWidth,
           },
-          grid: { color: GRID_COLOR },
-          ticks: { color: AXIS_TEXT_COLOR },
+          ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
         },
+        y: logY
+          ? {
+              type: "logarithmic",
+              afterBuildTicks: buildLogGraphPaperTicks,
+              title: { display: true, text: "Impedance [Ω] (log scale)", color: AXIS_TEXT_COLOR },
+              grid: {
+                color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR),
+                lineWidth: logGridWidth,
+              },
+              ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
+            }
+          : {
+              type: "linear",
+              title: { display: true, text: "Impedance [Ω]", color: AXIS_TEXT_COLOR },
+              grid: { color: MINOR_GRID_COLOR },
+              ticks: { color: AXIS_TEXT_COLOR },
+            },
       },
       plugins: {
         legend: {

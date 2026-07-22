@@ -13,6 +13,7 @@ import {
 import annotationPlugin from "chartjs-plugin-annotation";
 import { Line } from "react-chartjs-2";
 import type { QComparisonSweep } from "@/lib/rlc";
+import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 
 ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
 
@@ -21,7 +22,8 @@ ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, a
 // R / lower Q (wider peak).
 const CURVE_COLORS = ["#2f9e58", "#1863dc", "#e5484d"];
 const RESONANT_COLOR = "#8a8f98";
-const GRID_COLOR = "rgba(128, 128, 128, 0.18)";
+const MAJOR_GRID_COLOR = "rgba(128, 128, 128, 0.4)";
+const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
 interface Props {
@@ -55,15 +57,23 @@ export default function QChart({ sweep }: Props) {
       scales: {
         x: {
           type: "logarithmic",
+          afterBuildTicks: buildLogGraphPaperTicks,
           title: { display: true, text: "Frequency [Hz] (log scale)", color: AXIS_TEXT_COLOR },
-          grid: { color: GRID_COLOR },
-          ticks: { color: AXIS_TEXT_COLOR },
+          grid: {
+            color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR),
+            lineWidth: logGridWidth,
+          },
+          ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
         },
         y: {
           type: "logarithmic",
+          afterBuildTicks: buildLogGraphPaperTicks,
           title: { display: true, text: "Admittance |Y| = 1/|Z| (log scale)", color: AXIS_TEXT_COLOR },
-          grid: { color: GRID_COLOR },
-          ticks: { color: AXIS_TEXT_COLOR },
+          grid: {
+            color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR),
+            lineWidth: logGridWidth,
+          },
+          ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
         },
       },
       plugins: {

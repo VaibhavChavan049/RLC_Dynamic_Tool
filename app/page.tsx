@@ -51,7 +51,7 @@ export default function Home() {
   const [presetIndex, setPresetIndex] = useState(0);
   const [f0Unit, setF0Unit] = useState("Hz");
   const [w0Unit, setW0Unit] = useState("rad/s");
-  const [logY, setLogY] = useState(false);
+  const [logY, setLogY] = useState(true);
 
   const { L, C, R, excelF0 } = useMemo(() => {
     if (mode === "preset") {
