@@ -22,6 +22,14 @@ const QChart = dynamic(() => import("@/components/QChart"), { ssr: false });
 
 type Mode = "manual" | "preset";
 
+// Resonant frequency result unit: display label -> multiplier applied to
+// the value in Hz (e.g. 1 kHz shown = f0 in Hz * 1e-3).
+const F0_UNITS: Record<string, number> = {
+  Hz: 1,
+  kHz: 1e-3,
+  MHz: 1e-6,
+};
+
 export default function Home() {
   const [mode, setMode] = useState<Mode>("manual");
 
@@ -33,6 +41,8 @@ export default function Home() {
   const [rUnit, setRUnit] = useState("Ω (Ohm)");
 
   const [presetIndex, setPresetIndex] = useState(0);
+  const [f0Unit, setF0Unit] = useState("Hz");
+  const [logY, setLogY] = useState(false);
 
   const { L, C, R, excelF0 } = useMemo(() => {
     if (mode === "preset") {
@@ -183,10 +193,63 @@ export default function Home() {
           </div>
 
           <div className={styles.main}>
+            <details className={styles.formulasBox}>
+              <summary>Formulas used</summary>
+              <div className={styles.formulasList}>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Capacitive reactance Xc</span>
+                  <span className={styles.formulaExpr}>Xc = 1 / (2π·f·C)</span>
+                </div>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Inductive reactance XL</span>
+                  <span className={styles.formulaExpr}>XL = 2π·f·L</span>
+                </div>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Resonant frequency f0</span>
+                  <span className={styles.formulaExpr}>f0 = 1 / (2π·√(L·C))</span>
+                </div>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Angular resonant frequency w0</span>
+                  <span className={styles.formulaExpr}>w0 = 1 / √(L·C) = 2π·f0</span>
+                </div>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Characteristic impedance Zo</span>
+                  <span className={styles.formulaExpr}>Zo = √(L / C)</span>
+                </div>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Quality factor Q</span>
+                  <span className={styles.formulaExpr}>Q = (1 / R)·√(L / C)</span>
+                </div>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Impedance magnitude |Z|</span>
+                  <span className={styles.formulaExpr}>|Z| = √(R² + (XL − Xc)²)</span>
+                </div>
+                <div className={styles.formulaRow}>
+                  <span className={styles.formulaName}>Admittance magnitude |Y|</span>
+                  <span className={styles.formulaExpr}>|Y| = 1 / |Z|</span>
+                </div>
+              </div>
+            </details>
+
             <div className={styles.metrics}>
               <div className={styles.metricCardHighlight}>
-                <div className={styles.metricLabel}>Resonant frequency f0</div>
-                <div className={styles.metricValue}>{sweep.f0.toLocaleString(undefined, { maximumFractionDigits: 4 })} Hz</div>
+                <div className={styles.metricRow}>
+                  <div className={styles.metricLabel}>Resonant frequency f0</div>
+                  <select
+                    className={styles.unitSelect}
+                    value={f0Unit}
+                    onChange={(e) => setF0Unit(e.target.value)}
+                  >
+                    {Object.keys(F0_UNITS).map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.metricValue}>
+                  {(sweep.f0 * F0_UNITS[f0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {f0Unit}
+                </div>
               </div>
               <div className={styles.metricCard}>
                 <div className={styles.metricLabel}>Characteristic impedance Zo</div>
@@ -200,16 +263,14 @@ export default function Home() {
                 <div className={styles.metricLabel}>Quality factor Q</div>
                 <div className={styles.metricValue}>{Q.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
               </div>
-              <div className={styles.metricCard}>
-                <div className={styles.metricLabel}>L, C, R (SI units)</div>
-                <div className={styles.metricValue} style={{ fontSize: "1rem" }}>
-                  {L.toPrecision(3)} H, {C.toPrecision(3)} F, {R.toPrecision(3)} Ω
-                </div>
-              </div>
             </div>
 
             <div className={styles.chartPanel}>
-              <RlcChart sweep={sweep} />
+              <label className={styles.checkboxRow}>
+                <input type="checkbox" checked={logY} onChange={(e) => setLogY(e.target.checked)} />
+                Log scale Y-axis (Impedance)
+              </label>
+              <RlcChart sweep={sweep} logY={logY} />
             </div>
 
             <div className={styles.chartPanel}>

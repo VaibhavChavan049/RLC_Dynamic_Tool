@@ -28,9 +28,10 @@ const AXIS_TEXT_COLOR = "#8a8f98";
 
 interface Props {
   sweep: ReactanceSweep;
+  logY?: boolean;
 }
 
-export default function RlcChart({ sweep }: Props) {
+export default function RlcChart({ sweep, logY = false }: Props) {
   const { freqs, xc, xl, f0 } = sweep;
 
   const data = useMemo(
@@ -74,8 +75,12 @@ export default function RlcChart({ sweep }: Props) {
           ticks: { color: AXIS_TEXT_COLOR },
         },
         y: {
-          type: "linear",
-          title: { display: true, text: "Impedance [Ω]", color: AXIS_TEXT_COLOR },
+          type: logY ? "logarithmic" : "linear",
+          title: {
+            display: true,
+            text: logY ? "Impedance [Ω] (log scale)" : "Impedance [Ω]",
+            color: AXIS_TEXT_COLOR,
+          },
           grid: { color: GRID_COLOR },
           ticks: { color: AXIS_TEXT_COLOR },
         },
@@ -115,7 +120,7 @@ export default function RlcChart({ sweep }: Props) {
         },
       },
     }),
-    [f0]
+    [f0, logY]
   );
 
   return (

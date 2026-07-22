@@ -194,6 +194,32 @@
   letter-spacing: 0.03em;
 }
 
+.metricRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.unitSelect {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+}
+
 .metricValue {
   margin-top: 0.3rem;
   font-size: 1.35rem;
@@ -212,4 +238,43 @@
   font-size: 0.85rem;
   color: var(--muted);
   margin-bottom: 0.75rem;
+}
+
+.formulasBox {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.9rem 1.25rem;
+}
+
+.formulasBox summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.formulasList {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.formulaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  align-items: baseline;
+}
+
+.formulaName {
+  color: var(--muted);
+  min-width: 170px;
+}
+
+.formulaExpr {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--accent-strong);
 }
