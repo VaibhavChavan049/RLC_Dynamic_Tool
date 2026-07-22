@@ -58,19 +58,19 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-/** f0 = 1 / (2*pi*sqrt(L*C)): the frequency where XL = Xc. */
+/** w0 = 1/sqrt(L*C): angular resonant frequency in rad/s. */
+export function angularResonantFreq(L: number, C: number): number {
+  return 1 / Math.sqrt(L * C);
+}
+
+/** f0 = w0 / (2*pi): the frequency (in Hz) where XL = Xc. */
 export function resonantFreq(L: number, C: number): number {
-  return 1 / (2 * Math.PI * Math.sqrt(L * C));
+  return angularResonantFreq(L, C) / (2 * Math.PI);
 }
 
 /** Zo = sqrt(L/C): the reactance value both curves share at resonance. */
 export function characteristicImpedance(L: number, C: number): number {
   return Math.sqrt(L / C);
-}
-
-/** w0 = 1/sqrt(L*C): angular resonant frequency in rad/s (w0 = 2*pi*f0). */
-export function angularResonantFreq(L: number, C: number): number {
-  return 1 / Math.sqrt(L * C);
 }
 
 /**
