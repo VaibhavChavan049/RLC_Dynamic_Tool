@@ -10,11 +10,15 @@ import {
   PRESETS,
   reactanceSweep,
   characteristicImpedance,
+  angularResonantFreq,
+  qualityFactor,
+  admittanceQSweep,
 } from "@/lib/rlc";
 
 // Chart.js touches the DOM/canvas, so it must only run in the browser.
 // Load it client-side only and skip server-side rendering for it.
 const RlcChart = dynamic(() => import("@/components/RlcChart"), { ssr: false });
+const QChart = dynamic(() => import("@/components/QChart"), { ssr: false });
 
 type Mode = "manual" | "preset";
 
@@ -45,6 +49,9 @@ export default function Home() {
 
   const sweep = useMemo(() => reactanceSweep(L, C), [L, C]);
   const Zo = useMemo(() => characteristicImpedance(L, C), [L, C]);
+  const w0 = useMemo(() => angularResonantFreq(L, C), [L, C]);
+  const Q = useMemo(() => qualityFactor(R, L, C), [R, L, C]);
+  const qSweep = useMemo(() => admittanceQSweep(R, L, C), [R, L, C]);
 
   return (
     <div className={styles.page}>
@@ -186,6 +193,14 @@ export default function Home() {
                 <div className={styles.metricValue}>{Zo.toLocaleString(undefined, { maximumFractionDigits: 4 })} Ω</div>
               </div>
               <div className={styles.metricCard}>
+                <div className={styles.metricLabel}>Angular resonant frequency w0</div>
+                <div className={styles.metricValue}>{w0.toLocaleString(undefined, { maximumFractionDigits: 4 })} rad/s</div>
+              </div>
+              <div className={styles.metricCard}>
+                <div className={styles.metricLabel}>Quality factor Q</div>
+                <div className={styles.metricValue}>{Q.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+              </div>
+              <div className={styles.metricCard}>
                 <div className={styles.metricLabel}>L, C, R (SI units)</div>
                 <div className={styles.metricValue} style={{ fontSize: "1rem" }}>
                   {L.toPrecision(3)} H, {C.toPrecision(3)} F, {R.toPrecision(3)} Ω
@@ -195,6 +210,13 @@ export default function Home() {
 
             <div className={styles.chartPanel}>
               <RlcChart sweep={sweep} />
+            </div>
+
+            <div className={styles.chartPanel}>
+              <div className={styles.chartPanelTitle}>
+                Resonance peak vs quality factor (Q): lower R means higher Q and a sharper peak
+              </div>
+              <QChart sweep={qSweep} />
             </div>
           </div>
         </div>

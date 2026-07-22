@@ -68,6 +68,37 @@ export function characteristicImpedance(L: number, C: number): number {
   return Math.sqrt(L / C);
 }
 
+/** w0 = 1/sqrt(L*C): angular resonant frequency in rad/s (w0 = 2*pi*f0). */
+export function angularResonantFreq(L: number, C: number): number {
+  return 1 / Math.sqrt(L * C);
+}
+
+/**
+ * Q = (1/R) * sqrt(L/C): quality factor of a series RLC tank. Higher Q
+ * (lower R) gives a sharper, narrower resonance peak; lower Q (higher R)
+ * gives a wider one. Q and w0 are the two parameters of the standard
+ * 2nd-order denominator s^2 + (w0/Q)*s + w0^2 that describes this circuit.
+ */
+export function qualityFactor(R: number, L: number, C: number): number {
+  return (1 / R) * Math.sqrt(L / C);
+}
+
+/** |Z(f)| = sqrt(R^2 + (XL(f) - Xc(f))^2): series RLC impedance magnitude. */
+export function impedanceMagnitude(f: number, R: number, L: number, C: number): number {
+  const xl = 2 * Math.PI * f * L;
+  const xc = 1 / (2 * Math.PI * f * C);
+  return Math.sqrt(R * R + (xl - xc) * (xl - xc));
+}
+
+/**
+ * |Y(f)| = 1/|Z(f)|: admittance magnitude. For a SERIES RLC circuit, |Z|
+ * is at its minimum (= R) at resonance, so |Y| peaks there -- this is the
+ * classic resonance peak, and its sharpness depends on Q.
+ */
+export function admittanceMagnitude(f: number, R: number, L: number, C: number): number {
+  return 1 / impedanceMagnitude(f, R, L, C);
+}
+
 export interface ReactanceSweep {
   freqs: number[];
   xc: number[];
@@ -99,4 +130,49 @@ export function reactanceSweep(L: number, C: number, points = 200): ReactanceSwe
   }
 
   return { freqs, xc, xl, f0 };
+}
+
+export interface QComparisonCurve {
+  label: string;
+  R: number;
+  Q: number;
+  admittance: number[];
+}
+
+export interface QComparisonSweep {
+  freqs: number[];
+  curves: QComparisonCurve[];
+  f0: number;
+}
+
+/**
+ * Sweep |Y(f)| = 1/|Z(f)| over the same frequency range as reactanceSweep,
+ * for three R values around the entered one (half, current, double), so the
+ * effect of Q on the resonance peak's sharpness can be compared directly.
+ */
+export function admittanceQSweep(R: number, L: number, C: number, points = 200): QComparisonSweep {
+  const f0 = resonantFreq(L, C);
+  const logStart = Math.log10(f0 / 100);
+  const logStop = Math.log10(f0 * 100);
+
+  const freqs: number[] = new Array(points);
+  for (let i = 0; i < points; i++) {
+    const t = i / (points - 1);
+    freqs[i] = Math.pow(10, logStart + t * (logStop - logStart));
+  }
+
+  const rValues = [
+    { label: "Lower R (higher Q)", R: R / 2 },
+    { label: "Current R", R },
+    { label: "Higher R (lower Q)", R: R * 2 },
+  ];
+
+  const curves: QComparisonCurve[] = rValues.map(({ label, R: rVal }) => ({
+    label,
+    R: rVal,
+    Q: qualityFactor(rVal, L, C),
+    admittance: freqs.map((f) => admittanceMagnitude(f, rVal, L, C)),
+  }));
+
+  return { freqs, curves, f0 };
 }
