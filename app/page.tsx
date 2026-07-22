@@ -30,6 +30,14 @@ const F0_UNITS: Record<string, number> = {
   MHz: 1e-6,
 };
 
+// Angular resonant frequency result unit: display label -> multiplier
+// applied to the value in rad/s. "Hz" here means "converted to Hz",
+// i.e. divided by 2*pi -- same number the f0 card shows in Hz.
+const W0_UNITS: Record<string, number> = {
+  "rad/s": 1,
+  Hz: 1 / (2 * Math.PI),
+};
+
 export default function Home() {
   const [mode, setMode] = useState<Mode>("manual");
 
@@ -42,6 +50,7 @@ export default function Home() {
 
   const [presetIndex, setPresetIndex] = useState(0);
   const [f0Unit, setF0Unit] = useState("Hz");
+  const [w0Unit, setW0Unit] = useState("rad/s");
   const [logY, setLogY] = useState(false);
 
   const { L, C, R, excelF0 } = useMemo(() => {
@@ -205,12 +214,12 @@ export default function Home() {
                   <span className={styles.formulaExpr}>XL = 2π·f·L</span>
                 </div>
                 <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Resonant frequency f0</span>
-                  <span className={styles.formulaExpr}>f0 = 1 / (2π·√(L·C))</span>
+                  <span className={styles.formulaName}>Angular resonant frequency w0</span>
+                  <span className={styles.formulaExpr}>w0 = 1 / √(L·C)</span>
                 </div>
                 <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Angular resonant frequency w0</span>
-                  <span className={styles.formulaExpr}>w0 = 1 / √(L·C) = 2π·f0</span>
+                  <span className={styles.formulaName}>Resonant frequency f0</span>
+                  <span className={styles.formulaExpr}>f0 = w0 / (2π)</span>
                 </div>
                 <div className={styles.formulaRow}>
                   <span className={styles.formulaName}>Characteristic impedance Zo</span>
@@ -256,8 +265,23 @@ export default function Home() {
                 <div className={styles.metricValue}>{Zo.toLocaleString(undefined, { maximumFractionDigits: 4 })} Ω</div>
               </div>
               <div className={styles.metricCard}>
-                <div className={styles.metricLabel}>Angular resonant frequency w0</div>
-                <div className={styles.metricValue}>{w0.toLocaleString(undefined, { maximumFractionDigits: 4 })} rad/s</div>
+                <div className={styles.metricRow}>
+                  <div className={styles.metricLabel}>Angular resonant frequency w0</div>
+                  <select
+                    className={styles.unitSelect}
+                    value={w0Unit}
+                    onChange={(e) => setW0Unit(e.target.value)}
+                  >
+                    {Object.keys(W0_UNITS).map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.metricValue}>
+                  {(w0 * W0_UNITS[w0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {w0Unit}
+                </div>
               </div>
               <div className={styles.metricCard}>
                 <div className={styles.metricLabel}>Quality factor Q</div>
