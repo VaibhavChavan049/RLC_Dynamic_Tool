@@ -10,10 +10,10 @@ interface Props {
   onXStartChange: (value: number) => void;
   xFinish: number;
   onXFinishChange: (value: number) => void;
-  xDelta: number;
-  onXDeltaChange: (value: number) => void;
+  xNumPoints: number;
+  onXNumPointsChange: (value: number) => void;
+  computedDelta: number;
   downsampled: boolean;
-  tooCoarse: boolean;
   invalidParams: boolean;
   pointCount: number;
 
@@ -27,9 +27,10 @@ interface Props {
 
 /**
  * Per-chart axis controls: X-axis (frequency) auto/manual with
- * start/finish/delta, and Y-axis auto/manual with min/max. Each chart on
- * the page gets its own instance of this with its own state, so the two
- * charts can be swept/scaled independently of each other.
+ * start/finish/number-of-points (the step size is derived, not entered
+ * directly), and Y-axis auto/manual with min/max. Each chart on the page
+ * gets its own instance of this with its own state, so the two charts can
+ * be swept/scaled independently of each other.
  */
 export default function AxisControls({
   xMode,
@@ -38,10 +39,10 @@ export default function AxisControls({
   onXStartChange,
   xFinish,
   onXFinishChange,
-  xDelta,
-  onXDeltaChange,
+  xNumPoints,
+  onXNumPointsChange,
+  computedDelta,
   downsampled,
-  tooCoarse,
   invalidParams,
   pointCount,
   yMode,
@@ -86,28 +87,31 @@ export default function AxisControls({
               />
             </label>
             <label className={styles.fieldLabel}>
-              Delta (Hz)
+              Number of points
               <input
                 className={styles.input}
                 type="number"
-                value={xDelta}
-                min={0}
-                onChange={(e) => onXDeltaChange(Number(e.target.value))}
+                value={xNumPoints}
+                min={1}
+                step={1}
+                onChange={(e) => onXNumPointsChange(Number(e.target.value))}
               />
             </label>
             {invalidParams && (
               <p className={styles.noteWarning}>
-                Finish must be greater than Start, and Delta must be greater than 0 -- showing the auto sweep until fixed.
+                Finish must be greater than Start, and Number of points must be at least 1 -- showing the auto sweep
+                until fixed.
               </p>
             )}
-            {tooCoarse && !invalidParams && (
-              <p className={styles.noteWarning}>
-                Delta is larger than the whole Start-Finish range, so only those 2 points can be shown -- lower the
-                delta to see more of the curve.
+            {!invalidParams && (
+              <p className={styles.note}>
+                Step size (delta) = (Finish − Start) / Points = {computedDelta.toLocaleString(undefined, { maximumFractionDigits: 4 })} Hz
               </p>
             )}
             {downsampled && (
-              <p className={styles.note}>Delta too fine for this range -- resampled to {pointCount.toLocaleString()} points.</p>
+              <p className={styles.note}>
+                That many points is too much to render smoothly -- resampled to {pointCount.toLocaleString()} points.
+              </p>
             )}
           </>
         )}

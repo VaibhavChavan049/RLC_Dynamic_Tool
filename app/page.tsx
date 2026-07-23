@@ -67,20 +67,22 @@ export default function Home() {
 
   // Each chart gets its own independent X-axis (frequency sweep) and Y-axis
   // (display range) controls -- "auto" behaves as before (X: two decades
-  // either side of f0; Y: auto-scaled), "manual" lets start/finish/delta or
-  // min/max be set directly, like dialing an LCR meter's sweep.
+  // either side of f0; Y: auto-scaled). "manual" takes Start, Finish, and
+  // Number of Points directly (matching the whiteboard's own worked
+  // example: Start=10Hz, Finish=1,000,000Hz, Points=500); the step size
+  // is derived, not entered.
   const [chart1XMode, setChart1XMode] = useState<SweepMode>("auto");
-  const [chart1Start, setChart1Start] = useState(1);
+  const [chart1Start, setChart1Start] = useState(10);
   const [chart1Finish, setChart1Finish] = useState(1_000_000);
-  const [chart1Delta, setChart1Delta] = useState(1000);
+  const [chart1NumPoints, setChart1NumPoints] = useState(500);
   const [chart1YMode, setChart1YMode] = useState<SweepMode>("auto");
   const [chart1YMin, setChart1YMin] = useState(0.1);
   const [chart1YMax, setChart1YMax] = useState(1000);
 
   const [chart2XMode, setChart2XMode] = useState<SweepMode>("auto");
-  const [chart2Start, setChart2Start] = useState(1);
+  const [chart2Start, setChart2Start] = useState(10);
   const [chart2Finish, setChart2Finish] = useState(1_000_000);
-  const [chart2Delta, setChart2Delta] = useState(1000);
+  const [chart2NumPoints, setChart2NumPoints] = useState(500);
   const [chart2YMode, setChart2YMode] = useState<SweepMode>("auto");
   const [chart2YMin, setChart2YMin] = useState(0.1);
   const [chart2YMax, setChart2YMax] = useState(1000);
@@ -107,14 +109,14 @@ export default function Home() {
   const f0 = useMemo(() => resonantFreq(L, C), [L, C]);
 
   const chart1Sweep = useMemo(
-    () => buildFrequencySweep(f0, { mode: chart1XMode, start: chart1Start, finish: chart1Finish, delta: chart1Delta }),
-    [f0, chart1XMode, chart1Start, chart1Finish, chart1Delta]
+    () => buildFrequencySweep(f0, { mode: chart1XMode, start: chart1Start, finish: chart1Finish, numPoints: chart1NumPoints }),
+    [f0, chart1XMode, chart1Start, chart1Finish, chart1NumPoints]
   );
   const reactance = useMemo(() => reactanceAtFreqs(chart1Sweep.freqs, L, C), [chart1Sweep, L, C]);
 
   const chart2Sweep = useMemo(
-    () => buildFrequencySweep(f0, { mode: chart2XMode, start: chart2Start, finish: chart2Finish, delta: chart2Delta }),
-    [f0, chart2XMode, chart2Start, chart2Finish, chart2Delta]
+    () => buildFrequencySweep(f0, { mode: chart2XMode, start: chart2Start, finish: chart2Finish, numPoints: chart2NumPoints }),
+    [f0, chart2XMode, chart2Start, chart2Finish, chart2NumPoints]
   );
   const rCurves = useMemo(
     () => buildRComparisonCurves(chart2Sweep.freqs, comparisonRList, L, C),
@@ -400,10 +402,10 @@ export default function Home() {
                   onXStartChange={setChart1Start}
                   xFinish={chart1Finish}
                   onXFinishChange={setChart1Finish}
-                  xDelta={chart1Delta}
-                  onXDeltaChange={setChart1Delta}
+                  xNumPoints={chart1NumPoints}
+                  onXNumPointsChange={setChart1NumPoints}
+                  computedDelta={chart1Sweep.delta}
                   downsampled={chart1Sweep.downsampled}
-                  tooCoarse={chart1Sweep.tooCoarse}
                   invalidParams={chart1Sweep.invalidParams}
                   pointCount={chart1Sweep.freqs.length}
                   yMode={chart1YMode}
@@ -437,10 +439,10 @@ export default function Home() {
                   onXStartChange={setChart2Start}
                   xFinish={chart2Finish}
                   onXFinishChange={setChart2Finish}
-                  xDelta={chart2Delta}
-                  onXDeltaChange={setChart2Delta}
+                  xNumPoints={chart2NumPoints}
+                  onXNumPointsChange={setChart2NumPoints}
+                  computedDelta={chart2Sweep.delta}
                   downsampled={chart2Sweep.downsampled}
-                  tooCoarse={chart2Sweep.tooCoarse}
                   invalidParams={chart2Sweep.invalidParams}
                   pointCount={chart2Sweep.freqs.length}
                   yMode={chart2YMode}

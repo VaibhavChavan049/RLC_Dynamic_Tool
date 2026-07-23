@@ -105,21 +105,23 @@ export interface SweepParams {
   mode: SweepMode;
   start: number; // Hz, used only in "manual" mode
   finish: number; // Hz, used only in "manual" mode
-  delta: number; // Hz, used only in "manual" mode -- the step size, like
-  // dialing "start/stop/increment" on an LCR meter's sweep
+  numPoints: number; // number of steps from start to finish, used only in
+  // "manual" mode. The step size (delta) is derived from this:
+  //   delta = (finish - start) / numPoints
+  // matching the whiteboard's own worked example (Start=10, End=1,000,000,
+  // Points=500 -> delta = (1,000,000 - 10) / 500).
 }
 
-// Keeps charts smooth and the browser responsive. A very fine delta over a
-// wide range (e.g. 1 Hz steps from 1 Hz to 1 MHz = a million points) would
-// freeze the chart, so points beyond this get evenly resampled across the
-// same start/finish range instead of literally stepping one-by-one.
+// Keeps charts smooth and the browser responsive. Asking for millions of
+// points would freeze the chart, so requests beyond this get evenly
+// resampled across the same start/finish range instead.
 const MAX_SWEEP_POINTS = 2000;
 
 export interface FrequencySweep {
   freqs: number[];
-  downsampled: boolean; // delta was finer than could be rendered smoothly, resampled to MAX_SWEEP_POINTS
-  tooCoarse: boolean; // delta was larger than (finish - start), clamped to just [start, finish]
-  invalidParams: boolean; // start/finish/delta don't make sense (e.g. finish <= start); fell back to auto
+  delta: number; // the computed step size (Hz) between consecutive points
+  downsampled: boolean; // numPoints was too high to render smoothly, resampled to MAX_SWEEP_POINTS
+  invalidParams: boolean; // start/finish/numPoints don't make sense (e.g. finish <= start); fell back to auto
 }
 
 function autoSweep(f0: number): number[] {
@@ -138,47 +140,43 @@ function autoSweep(f0: number): number[] {
  * Build the frequency points shared by every chart on the page.
  *   "auto"   -- log-spaced, two decades either side of f0 (previous default
  *               behavior, centers the resonant frequency on the chart)
- *   "manual" -- steps from `start` to `finish` in increments of `delta`,
- *               exactly like sweeping frequency on an LCR meter
+ *   "manual" -- Start, Finish, and Number of Points are entered directly;
+ *               the step size is derived as (finish - start) / numPoints,
+ *               producing numPoints + 1 samples from start to finish
+ *               inclusive (matches the whiteboard's worked example)
  */
 export function buildFrequencySweep(f0: number, params: SweepParams): FrequencySweep {
   if (params.mode === "manual") {
-    const { start, finish, delta } = params;
-    const validParams = start > 0 && finish > start && delta > 0;
+    const { start, finish, numPoints } = params;
+    const validParams = start > 0 && finish > start && Number.isFinite(numPoints) && numPoints >= 1;
 
     if (!validParams) {
-      // e.g. Finish <= Start, or Delta <= 0 -- these can't be swept, so fall
+      // e.g. Finish <= Start, or Points < 1 -- these can't be swept, so fall
       // back to the auto sweep rather than silently producing an empty/
       // single-point chart. `invalidParams` lets the UI show why.
-      return { freqs: autoSweep(f0), downsampled: false, tooCoarse: false, invalidParams: true };
+      return { freqs: autoSweep(f0), delta: 0, downsampled: false, invalidParams: true };
     }
 
-    const rawCount = Math.floor((finish - start) / delta) + 1;
+    const delta = (finish - start) / numPoints;
+    const sampleCount = numPoints + 1; // numPoints steps -> numPoints+1 samples, start through finish
 
-    if (rawCount < 2) {
-      // Delta is larger than the whole start-finish range -- a line needs
-      // at least 2 points, so just show the two endpoints instead of a
-      // single (invisible) point.
-      return { freqs: [start, finish], downsampled: false, tooCoarse: true, invalidParams: false };
+    if (sampleCount <= MAX_SWEEP_POINTS) {
+      const freqs: number[] = new Array(sampleCount);
+      for (let i = 0; i < sampleCount; i++) freqs[i] = start + i * delta;
+      return { freqs, delta, downsampled: false, invalidParams: false };
     }
 
-    if (rawCount <= MAX_SWEEP_POINTS) {
-      const freqs: number[] = new Array(rawCount);
-      for (let i = 0; i < rawCount; i++) freqs[i] = start + i * delta;
-      return { freqs, downsampled: false, tooCoarse: false, invalidParams: false };
-    }
-
-    // Delta is finer than we can render smoothly -- keep the requested
+    // Too many points requested to render smoothly -- keep the requested
     // start/finish range, but resample evenly to MAX_SWEEP_POINTS.
     const freqs: number[] = new Array(MAX_SWEEP_POINTS);
     for (let i = 0; i < MAX_SWEEP_POINTS; i++) {
       const t = i / (MAX_SWEEP_POINTS - 1);
       freqs[i] = start + t * (finish - start);
     }
-    return { freqs, downsampled: true, tooCoarse: false, invalidParams: false };
+    return { freqs, delta, downsampled: true, invalidParams: false };
   }
 
-  return { freqs: autoSweep(f0), downsampled: false, tooCoarse: false, invalidParams: false };
+  return { freqs: autoSweep(f0), delta: 0, downsampled: false, invalidParams: false };
 }
 
 export interface ReactancePoints {
