@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import {
   Chart as ChartJS,
   LogarithmicScale,
@@ -12,11 +12,23 @@ import {
   type ChartOptions,
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
+import zoomPlugin from "chartjs-plugin-zoom";
 import { Line } from "react-chartjs-2";
 import type { ReactancePoints } from "@/lib/rlc";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
+import { downloadCsv } from "@/lib/csv";
+import styles from "./ChartToolbar.module.css";
 
-ChartJS.register(LogarithmicScale, LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
+ChartJS.register(
+  LogarithmicScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  annotationPlugin,
+  zoomPlugin
+);
 
 // Colors follow the whiteboard sketch's own convention (red = Xc, blue =
 // XL), not a generic categorical palette; the mapping is the whole point
@@ -38,6 +50,12 @@ interface Props {
 
 export default function RlcChart({ reactance, f0, logY = false, yMin, yMax }: Props) {
   const { freqs, xc, xl } = reactance;
+  const chartRef = useRef<ChartJS<"line">>(null);
+
+  function handleDownloadCsv() {
+    const rows = freqs.map((f, i) => [i + 1, f, xc[i], xl[i]]);
+    downloadCsv("rlc_xc_xl_sweep.csv", ["Point", "Frequency_Hz", "Xc_Ohm", "XL_Ohm"], rows);
+  }
 
   const data = useMemo(
     () => ({
@@ -144,14 +162,44 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax }: Pr
             },
           },
         },
+        // Scroll-wheel and pinch zoom, plus click-drag panning, on both
+        // axes -- lets a user zoom into the resonance crossing point
+        // directly on the chart, on top of the Start/Finish/Points fields.
+        zoom: {
+          pan: { enabled: true, mode: "xy" },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: "xy",
+          },
+          limits: { x: { min: "original", max: "original" }, y: { min: "original", max: "original" } },
+        },
       },
     }),
     [f0, logY, yMin, yMax]
   );
 
+  function zoomIn() {
+    chartRef.current?.zoom(1.2);
+  }
+  function zoomOut() {
+    chartRef.current?.zoom(0.8);
+  }
+  function resetZoom() {
+    chartRef.current?.resetZoom();
+  }
+
   return (
-    <div style={{ height: 420, width: "100%" }}>
-      <Line data={data} options={options} />
+    <div>
+      <div style={{ height: 420, width: "100%" }}>
+        <Line ref={chartRef} data={data} options={options} />
+      </div>
+      <div className={styles.toolbar}>
+        <button type="button" onClick={zoomIn}>Zoom in</button>
+        <button type="button" onClick={zoomOut}>Zoom out</button>
+        <button type="button" onClick={resetZoom}>Reset zoom</button>
+        <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
+      </div>
     </div>
   );
 }

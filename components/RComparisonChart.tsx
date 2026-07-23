@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import {
   Chart as ChartJS,
   LogarithmicScale,
@@ -11,11 +11,14 @@ import {
   type ChartOptions,
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
+import zoomPlugin from "chartjs-plugin-zoom";
 import { Line } from "react-chartjs-2";
 import type { RComparisonCurve } from "@/lib/rlc";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
+import { downloadCsv } from "@/lib/csv";
+import styles from "./ChartToolbar.module.css";
 
-ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
+ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin, zoomPlugin);
 
 // Cycled in the order R values are added to the comparison list -- there's
 // no fixed "lower/current/higher" meaning anymore since the list is
@@ -38,6 +41,13 @@ interface Props {
 export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax }: Props) {
   const yLabel = field === "admittance" ? "Admittance |Y| = 1/|Z| (log scale)" : "Impedance |Z| (log scale)";
   const yUnit = field === "admittance" ? "" : " Ω";
+  const chartRef = useRef<ChartJS<"line">>(null);
+
+  function handleDownloadCsv() {
+    const headers = ["Point", "Frequency_Hz", ...curves.map((c) => `R=${c.R.toPrecision(3)}_${field}`)];
+    const rows = freqs.map((f, i) => [i + 1, f, ...curves.map((c) => c[field][i])]);
+    downloadCsv(`rlc_${field}_sweep.csv`, headers, rows);
+  }
 
   const data = useMemo(
     () => ({
@@ -111,14 +121,42 @@ export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax 
             },
           },
         },
+        // Scroll-wheel and pinch zoom, plus click-drag panning, on both axes.
+        zoom: {
+          pan: { enabled: true, mode: "xy" },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: "xy",
+          },
+          limits: { x: { min: "original", max: "original" }, y: { min: "original", max: "original" } },
+        },
       },
     }),
     [f0, yLabel, yUnit, yMin, yMax]
   );
 
+  function zoomIn() {
+    chartRef.current?.zoom(1.2);
+  }
+  function zoomOut() {
+    chartRef.current?.zoom(0.8);
+  }
+  function resetZoom() {
+    chartRef.current?.resetZoom();
+  }
+
   return (
-    <div style={{ height: 420, width: "100%" }}>
-      <Line data={data} options={options} />
+    <div>
+      <div style={{ height: 420, width: "100%" }}>
+        <Line ref={chartRef} data={data} options={options} />
+      </div>
+      <div className={styles.toolbar}>
+        <button type="button" onClick={zoomIn}>Zoom in</button>
+        <button type="button" onClick={zoomOut}>Zoom out</button>
+        <button type="button" onClick={resetZoom}>Reset zoom</button>
+        <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
+      </div>
     </div>
   );
 }
