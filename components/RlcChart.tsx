@@ -71,6 +71,12 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax }: Pr
     () => ({
       responsive: true,
       maintainAspectRatio: false,
+      // Data changes on every keystroke while typing a manual axis value;
+      // Chart.js's default transition animation can't keep up with rapid
+      // updates and shows a jumbled in-between frame, which looks like a
+      // rendering bug. Disabling animation makes every update snap
+      // instantly to the correct final state instead.
+      animation: false,
       interaction: { mode: "nearest", intersect: false, axis: "x" },
       scales: {
         x: {

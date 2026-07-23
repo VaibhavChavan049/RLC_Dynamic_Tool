@@ -59,6 +59,10 @@ export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax 
     () => ({
       responsive: true,
       maintainAspectRatio: false,
+      // See RlcChart.tsx: disable animation so rapid updates (e.g. typing a
+      // manual axis value) snap instantly instead of showing a jumbled
+      // in-between transition frame.
+      animation: false,
       interaction: { mode: "nearest", intersect: false, axis: "x" },
       scales: {
         x: {
