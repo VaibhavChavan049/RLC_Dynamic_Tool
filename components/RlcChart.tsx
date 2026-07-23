@@ -13,7 +13,7 @@ import {
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
 import { Line } from "react-chartjs-2";
-import type { ReactanceSweep } from "@/lib/rlc";
+import type { ReactancePoints } from "@/lib/rlc";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 
 ChartJS.register(LogarithmicScale, LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
@@ -29,12 +29,13 @@ const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
 interface Props {
-  sweep: ReactanceSweep;
+  reactance: ReactancePoints;
+  f0: number;
   logY?: boolean;
 }
 
-export default function RlcChart({ sweep, logY = false }: Props) {
-  const { freqs, xc, xl, f0 } = sweep;
+export default function RlcChart({ reactance, f0, logY = false }: Props) {
+  const { freqs, xc, xl } = reactance;
 
   const data = useMemo(
     () => ({

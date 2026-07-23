@@ -278,3 +278,55 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--accent-strong);
 }
+
+.panelDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.15rem 0;
+}
+
+.rList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rListRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--background);
+}
+
+.rListRemove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+
+.rListRemove:hover {
+  color: #e5484d;
+}
+
+.addButton {
+  padding: 0.55rem 0.7rem;
+  border-radius: 7px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.addButton:hover {
+  background: var(--accent-soft);
+}

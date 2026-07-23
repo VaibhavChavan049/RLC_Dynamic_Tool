@@ -8,17 +8,20 @@ import {
   C_UNITS,
   R_UNITS,
   PRESETS,
-  reactanceSweep,
   characteristicImpedance,
   angularResonantFreq,
   qualityFactor,
-  admittanceQSweep,
+  resonantFreq,
+  buildFrequencySweep,
+  reactanceAtFreqs,
+  buildRComparisonCurves,
+  type SweepMode,
 } from "@/lib/rlc";
 
 // Chart.js touches the DOM/canvas, so it must only run in the browser.
 // Load it client-side only and skip server-side rendering for it.
 const RlcChart = dynamic(() => import("@/components/RlcChart"), { ssr: false });
-const QChart = dynamic(() => import("@/components/QChart"), { ssr: false });
+const RComparisonChart = dynamic(() => import("@/components/RComparisonChart"), { ssr: false });
 
 type Mode = "manual" | "preset";
 
@@ -53,6 +56,21 @@ export default function Home() {
   const [w0Unit, setW0Unit] = useState("rad/s");
   const [logY, setLogY] = useState(true);
 
+  // Frequency sweep: "auto" centers two decades either side of f0 (previous
+  // default behavior); "manual" steps from startFreq to finishFreq in
+  // increments of deltaFreq, like dialing start/stop/increment on an LCR
+  // meter's sweep.
+  const [sweepMode, setSweepMode] = useState<SweepMode>("auto");
+  const [startFreq, setStartFreq] = useState(1);
+  const [finishFreq, setFinishFreq] = useState(1_000_000);
+  const [deltaFreq, setDeltaFreq] = useState(1000);
+
+  // R values to compare on the Admittance/Impedance charts. Starts with just
+  // the current R; "+ Add" appends whatever R is entered above, so earlier
+  // curves are kept (held) while new ones are added on top -- e.g. add R=1 Ω,
+  // then change R to 5 Ω and add that too, and both curves stay visible.
+  const [comparisonRList, setComparisonRList] = useState<number[]>([1]);
+
   const { L, C, R, excelF0 } = useMemo(() => {
     if (mode === "preset") {
       const p = PRESETS[presetIndex];
@@ -66,11 +84,27 @@ export default function Home() {
     };
   }, [mode, presetIndex, lValue, lUnit, cValue, cUnit, rValue, rUnit]);
 
-  const sweep = useMemo(() => reactanceSweep(L, C), [L, C]);
+  const f0 = useMemo(() => resonantFreq(L, C), [L, C]);
+  const freqSweep = useMemo(
+    () => buildFrequencySweep(f0, { mode: sweepMode, start: startFreq, finish: finishFreq, delta: deltaFreq }),
+    [f0, sweepMode, startFreq, finishFreq, deltaFreq]
+  );
+  const reactance = useMemo(() => reactanceAtFreqs(freqSweep.freqs, L, C), [freqSweep, L, C]);
+  const rCurves = useMemo(
+    () => buildRComparisonCurves(freqSweep.freqs, comparisonRList, L, C),
+    [freqSweep, comparisonRList, L, C]
+  );
   const Zo = useMemo(() => characteristicImpedance(L, C), [L, C]);
   const w0 = useMemo(() => angularResonantFreq(L, C), [L, C]);
   const Q = useMemo(() => qualityFactor(R, L, C), [R, L, C]);
-  const qSweep = useMemo(() => admittanceQSweep(R, L, C), [R, L, C]);
+
+  function addCurrentRToComparison() {
+    setComparisonRList((prev) => [...prev, R]);
+  }
+
+  function removeComparisonR(index: number) {
+    setComparisonRList((prev) => prev.filter((_, i) => i !== index));
+  }
 
   return (
     <div className={styles.page}>
@@ -199,6 +233,89 @@ export default function Home() {
                 )}
               </>
             )}
+
+            <div className={styles.panelDivider} />
+            <div className={styles.panelTitle}>Frequency sweep</div>
+            <div className={styles.modeToggle}>
+              <button
+                className={sweepMode === "auto" ? styles.active : undefined}
+                onClick={() => setSweepMode("auto")}
+              >
+                Auto (around f0)
+              </button>
+              <button
+                className={sweepMode === "manual" ? styles.active : undefined}
+                onClick={() => setSweepMode("manual")}
+              >
+                Manual
+              </button>
+            </div>
+            {sweepMode === "manual" && (
+              <>
+                <div className={styles.field}>
+                  <label htmlFor="start-freq">Start frequency (Hz)</label>
+                  <input
+                    id="start-freq"
+                    className={styles.input}
+                    type="number"
+                    value={startFreq}
+                    min={0}
+                    onChange={(e) => setStartFreq(Number(e.target.value))}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="finish-freq">Finish frequency (Hz)</label>
+                  <input
+                    id="finish-freq"
+                    className={styles.input}
+                    type="number"
+                    value={finishFreq}
+                    min={0}
+                    onChange={(e) => setFinishFreq(Number(e.target.value))}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="delta-freq">Increment / delta (Hz)</label>
+                  <input
+                    id="delta-freq"
+                    className={styles.input}
+                    type="number"
+                    value={deltaFreq}
+                    min={0}
+                    onChange={(e) => setDeltaFreq(Number(e.target.value))}
+                  />
+                </div>
+                {freqSweep.downsampled && (
+                  <p className={styles.presetNote}>
+                    That delta over this range would be too many points to render smoothly, so the chart shows{" "}
+                    {freqSweep.freqs.length.toLocaleString()} evenly-spaced points across the same start/finish range
+                    instead.
+                  </p>
+                )}
+              </>
+            )}
+
+            <div className={styles.panelDivider} />
+            <div className={styles.panelTitle}>Compare R values</div>
+            <p className={styles.presetNote}>
+              Shown on the Admittance and Impedance charts below, using the L/C above. Add the current R (
+              {R.toPrecision(3)} Ω), change R, and add again to keep both curves.
+            </p>
+            <div className={styles.rList}>
+              {comparisonRList.map((rVal, i) => (
+                <div key={i} className={styles.rListRow}>
+                  <span>
+                    R = {rVal.toPrecision(3)} Ω (Q = {qualityFactor(rVal, L, C).toFixed(2)})
+                  </span>
+                  <button className={styles.rListRemove} onClick={() => removeComparisonR(i)} aria-label="Remove">
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button className={styles.addButton} onClick={addCurrentRToComparison}>
+              + Add current R ({R.toPrecision(3)} Ω) to comparison
+            </button>
           </div>
 
           <div className={styles.main}>
@@ -257,7 +374,7 @@ export default function Home() {
                   </select>
                 </div>
                 <div className={styles.metricValue}>
-                  {(sweep.f0 * F0_UNITS[f0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {f0Unit}
+                  {(f0 * F0_UNITS[f0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {f0Unit}
                 </div>
               </div>
               <div className={styles.metricCard}>
@@ -294,14 +411,21 @@ export default function Home() {
                 <input type="checkbox" checked={logY} onChange={(e) => setLogY(e.target.checked)} />
                 Log scale Y-axis (Impedance)
               </label>
-              <RlcChart sweep={sweep} logY={logY} />
+              <RlcChart reactance={reactance} f0={f0} logY={logY} />
             </div>
 
             <div className={styles.chartPanel}>
               <div className={styles.chartPanelTitle}>
-                Resonance peak vs quality factor (Q): lower R means higher Q and a sharper peak
+                Impedance |Z| vs frequency: dips to R at resonance (reciprocal of the admittance chart below)
               </div>
-              <QChart sweep={qSweep} />
+              <RComparisonChart freqs={freqSweep.freqs} curves={rCurves} field="impedance" f0={f0} />
+            </div>
+
+            <div className={styles.chartPanel}>
+              <div className={styles.chartPanelTitle}>
+                Admittance |Y| vs quality factor (Q): lower R means higher Q and a sharper peak
+              </div>
+              <RComparisonChart freqs={freqSweep.freqs} curves={rCurves} field="admittance" f0={f0} />
             </div>
           </div>
         </div>

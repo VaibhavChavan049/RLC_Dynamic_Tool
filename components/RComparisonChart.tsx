@@ -12,41 +12,45 @@ import {
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
 import { Line } from "react-chartjs-2";
-import type { QComparisonSweep } from "@/lib/rlc";
+import type { RComparisonCurve } from "@/lib/rlc";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 
 ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
 
-// Same color meaning as the terminal script's version of this chart: green
-// = lower R / higher Q (sharper peak), blue = the entered R, red = higher
-// R / lower Q (wider peak).
-const CURVE_COLORS = ["#2f9e58", "#1863dc", "#e5484d"];
+// Cycled in the order R values are added to the comparison list -- there's
+// no fixed "lower/current/higher" meaning anymore since the list is
+// user-built, so colors just distinguish curves rather than encode meaning.
+const CURVE_COLORS = ["#1863dc", "#e5484d", "#2f9e58", "#f5a623", "#8b5cf6", "#00aeef"];
 const RESONANT_COLOR = "#8a8f98";
 const MAJOR_GRID_COLOR = "rgba(128, 128, 128, 0.4)";
 const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
 interface Props {
-  sweep: QComparisonSweep;
+  freqs: number[];
+  curves: RComparisonCurve[];
+  field: "admittance" | "impedance";
+  f0: number;
 }
 
-export default function QChart({ sweep }: Props) {
-  const { freqs, curves, f0 } = sweep;
+export default function RComparisonChart({ freqs, curves, field, f0 }: Props) {
+  const yLabel = field === "admittance" ? "Admittance |Y| = 1/|Z| (log scale)" : "Impedance |Z| (log scale)";
+  const yUnit = field === "admittance" ? "" : " Ω";
 
   const data = useMemo(
     () => ({
       datasets: curves.map((curve, i) => ({
-        label: `${curve.label} (R=${curve.R.toPrecision(3)} Ω, Q=${curve.Q.toFixed(2)})`,
-        data: freqs.map((f, j) => ({ x: f, y: curve.admittance[j] })),
-        borderColor: CURVE_COLORS[i],
-        backgroundColor: CURVE_COLORS[i],
+        label: `R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
+        data: freqs.map((f, j) => ({ x: f, y: curve[field][j] })),
+        borderColor: CURVE_COLORS[i % CURVE_COLORS.length],
+        backgroundColor: CURVE_COLORS[i % CURVE_COLORS.length],
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 4,
         tension: 0,
       })),
     }),
-    [freqs, curves]
+    [freqs, curves, field]
   );
 
   const options: ChartOptions<"line"> = useMemo(
@@ -68,7 +72,7 @@ export default function QChart({ sweep }: Props) {
         y: {
           type: "logarithmic",
           afterBuildTicks: buildLogGraphPaperTicks,
-          title: { display: true, text: "Admittance |Y| = 1/|Z| (log scale)", color: AXIS_TEXT_COLOR },
+          title: { display: true, text: yLabel, color: AXIS_TEXT_COLOR },
           grid: {
             color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR),
             lineWidth: logGridWidth,
@@ -84,7 +88,7 @@ export default function QChart({ sweep }: Props) {
         tooltip: {
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
-            label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toExponential(3)}`,
+            label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toExponential(3)}${yUnit}`,
           },
         },
         annotation: {
@@ -101,7 +105,7 @@ export default function QChart({ sweep }: Props) {
         },
       },
     }),
-    [f0]
+    [f0, yLabel, yUnit]
   );
 
   return (

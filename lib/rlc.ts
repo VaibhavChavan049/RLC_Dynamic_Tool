@@ -99,80 +99,107 @@ export function admittanceMagnitude(f: number, R: number, L: number, C: number):
   return 1 / impedanceMagnitude(f, R, L, C);
 }
 
-export interface ReactanceSweep {
+export type SweepMode = "auto" | "manual";
+
+export interface SweepParams {
+  mode: SweepMode;
+  start: number; // Hz, used only in "manual" mode
+  finish: number; // Hz, used only in "manual" mode
+  delta: number; // Hz, used only in "manual" mode -- the step size, like
+  // dialing "start/stop/increment" on an LCR meter's sweep
+}
+
+// Keeps charts smooth and the browser responsive. A very fine delta over a
+// wide range (e.g. 1 Hz steps from 1 Hz to 1 MHz = a million points) would
+// freeze the chart, so points beyond this get evenly resampled across the
+// same start/finish range instead of literally stepping one-by-one.
+const MAX_SWEEP_POINTS = 2000;
+
+export interface FrequencySweep {
   freqs: number[];
-  xc: number[];
-  xl: number[];
-  f0: number;
+  downsampled: boolean;
 }
 
 /**
- * Sweep frequency from f0/100 to f0*100 (log-spaced, matching the log
- * x-axis) and compute Xc/XL at each point. Centering the sweep two decades
- * either side of f0 is what makes the resonant frequency land in the
- * middle of the chart every time.
+ * Build the frequency points shared by every chart on the page.
+ *   "auto"   -- log-spaced, two decades either side of f0 (previous default
+ *               behavior, centers the resonant frequency on the chart)
+ *   "manual" -- steps from `start` to `finish` in increments of `delta`,
+ *               exactly like sweeping frequency on an LCR meter
  */
-export function reactanceSweep(L: number, C: number, points = 200): ReactanceSweep {
-  const f0 = resonantFreq(L, C);
-  const logStart = Math.log10(f0 / 100);
-  const logStop = Math.log10(f0 * 100);
+export function buildFrequencySweep(f0: number, params: SweepParams): FrequencySweep {
+  if (params.mode === "manual" && params.start > 0 && params.finish > params.start && params.delta > 0) {
+    const { start, finish, delta } = params;
+    const rawCount = Math.floor((finish - start) / delta) + 1;
 
-  const freqs: number[] = new Array(points);
-  const xc: number[] = new Array(points);
-  const xl: number[] = new Array(points);
+    if (rawCount <= MAX_SWEEP_POINTS) {
+      const freqs: number[] = new Array(rawCount);
+      for (let i = 0; i < rawCount; i++) freqs[i] = start + i * delta;
+      return { freqs, downsampled: false };
+    }
 
-  for (let i = 0; i < points; i++) {
-    const t = i / (points - 1);
-    const f = Math.pow(10, logStart + t * (logStop - logStart));
-    freqs[i] = f;
-    xc[i] = 1 / (2 * Math.PI * f * C); // capacitive reactance, falls with frequency
-    xl[i] = 2 * Math.PI * f * L; // inductive reactance, rises with frequency
+    // Delta is finer than we can render smoothly -- keep the requested
+    // start/finish range, but resample evenly to MAX_SWEEP_POINTS.
+    const freqs: number[] = new Array(MAX_SWEEP_POINTS);
+    for (let i = 0; i < MAX_SWEEP_POINTS; i++) {
+      const t = i / (MAX_SWEEP_POINTS - 1);
+      freqs[i] = start + t * (finish - start);
+    }
+    return { freqs, downsampled: true };
   }
 
-  return { freqs, xc, xl, f0 };
-}
-
-export interface QComparisonCurve {
-  label: string;
-  R: number;
-  Q: number;
-  admittance: number[];
-}
-
-export interface QComparisonSweep {
-  freqs: number[];
-  curves: QComparisonCurve[];
-  f0: number;
-}
-
-/**
- * Sweep |Y(f)| = 1/|Z(f)| over the same frequency range as reactanceSweep,
- * for three R values around the entered one (half, current, double), so the
- * effect of Q on the resonance peak's sharpness can be compared directly.
- */
-export function admittanceQSweep(R: number, L: number, C: number, points = 200): QComparisonSweep {
-  const f0 = resonantFreq(L, C);
+  const points = 200;
   const logStart = Math.log10(f0 / 100);
   const logStop = Math.log10(f0 * 100);
-
   const freqs: number[] = new Array(points);
   for (let i = 0; i < points; i++) {
     const t = i / (points - 1);
     freqs[i] = Math.pow(10, logStart + t * (logStop - logStart));
   }
+  return { freqs, downsampled: false };
+}
 
-  const rValues = [
-    { label: "Lower R (higher Q)", R: R / 2 },
-    { label: "Current R", R },
-    { label: "Higher R (lower Q)", R: R * 2 },
-  ];
+export interface ReactancePoints {
+  freqs: number[];
+  xc: number[];
+  xl: number[];
+}
 
-  const curves: QComparisonCurve[] = rValues.map(({ label, R: rVal }) => ({
-    label,
-    R: rVal,
-    Q: qualityFactor(rVal, L, C),
-    admittance: freqs.map((f) => admittanceMagnitude(f, rVal, L, C)),
-  }));
+/** Xc/XL at each frequency in `freqs`, for the Xc/XL crossing chart. */
+export function reactanceAtFreqs(freqs: number[], L: number, C: number): ReactancePoints {
+  const xc: number[] = new Array(freqs.length);
+  const xl: number[] = new Array(freqs.length);
+  for (let i = 0; i < freqs.length; i++) {
+    const f = freqs[i];
+    xc[i] = 1 / (2 * Math.PI * f * C); // capacitive reactance, falls with frequency
+    xl[i] = 2 * Math.PI * f * L; // inductive reactance, rises with frequency
+  }
+  return { freqs, xc, xl };
+}
 
-  return { freqs, curves, f0 };
+export interface RComparisonCurve {
+  R: number;
+  Q: number;
+  admittance: number[];
+  impedance: number[];
+}
+
+/**
+ * For each R value in `rList`, compute |Y(f)| and |Z(f)| across `freqs`.
+ * Feeds both the Admittance chart (peaks at resonance) and the Impedance
+ * chart (dips at resonance, since |Z| = 1/|Y|) from the same underlying
+ * data, so a manually-built list of R values (e.g. R=1 Ω kept, then R=5 Ω
+ * added on top) shows up consistently on both.
+ */
+export function buildRComparisonCurves(freqs: number[], rList: number[], L: number, C: number): RComparisonCurve[] {
+  return rList.map((R) => {
+    const admittance: number[] = new Array(freqs.length);
+    const impedance: number[] = new Array(freqs.length);
+    for (let i = 0; i < freqs.length; i++) {
+      const z = impedanceMagnitude(freqs[i], R, L, C);
+      impedance[i] = z;
+      admittance[i] = 1 / z;
+    }
+    return { R, Q: qualityFactor(R, L, C), admittance, impedance };
+  });
 }
