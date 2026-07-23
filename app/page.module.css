@@ -240,6 +240,23 @@
   margin-bottom: 0.75rem;
 }
 
+.chartPanelBody {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.chartCanvasWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .chartPanelBody {
+    flex-direction: column;
+  }
+}
+
 .formulasBox {
   background: var(--surface);
   border: 1px solid var(--border);

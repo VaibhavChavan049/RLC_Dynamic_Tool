@@ -32,9 +32,11 @@ interface Props {
   reactance: ReactancePoints;
   f0: number;
   logY?: boolean;
+  yMin?: number;
+  yMax?: number;
 }
 
-export default function RlcChart({ reactance, f0, logY = false }: Props) {
+export default function RlcChart({ reactance, f0, logY = false, yMin, yMax }: Props) {
   const { freqs, xc, xl } = reactance;
 
   const data = useMemo(
@@ -91,12 +93,16 @@ export default function RlcChart({ reactance, f0, logY = false }: Props) {
                 lineWidth: logGridWidth,
               },
               ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
+              min: yMin,
+              max: yMax,
             }
           : {
               type: "linear",
               title: { display: true, text: "Impedance [Ω]", color: AXIS_TEXT_COLOR },
               grid: { color: MINOR_GRID_COLOR },
               ticks: { color: AXIS_TEXT_COLOR },
+              min: yMin,
+              max: yMax,
             },
       },
       plugins: {
@@ -134,7 +140,7 @@ export default function RlcChart({ reactance, f0, logY = false }: Props) {
         },
       },
     }),
-    [f0, logY]
+    [f0, logY, yMin, yMax]
   );
 
   return (

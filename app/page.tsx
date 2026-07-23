@@ -22,6 +22,7 @@ import {
 // Load it client-side only and skip server-side rendering for it.
 const RlcChart = dynamic(() => import("@/components/RlcChart"), { ssr: false });
 const RComparisonChart = dynamic(() => import("@/components/RComparisonChart"), { ssr: false });
+const AxisControls = dynamic(() => import("@/components/AxisControls"), { ssr: false });
 
 type Mode = "manual" | "preset";
 
@@ -56,14 +57,25 @@ export default function Home() {
   const [w0Unit, setW0Unit] = useState("rad/s");
   const [logY, setLogY] = useState(true);
 
-  // Frequency sweep: "auto" centers two decades either side of f0 (previous
-  // default behavior); "manual" steps from startFreq to finishFreq in
-  // increments of deltaFreq, like dialing start/stop/increment on an LCR
-  // meter's sweep.
-  const [sweepMode, setSweepMode] = useState<SweepMode>("auto");
-  const [startFreq, setStartFreq] = useState(1);
-  const [finishFreq, setFinishFreq] = useState(1_000_000);
-  const [deltaFreq, setDeltaFreq] = useState(1000);
+  // Each chart gets its own independent X-axis (frequency sweep) and Y-axis
+  // (display range) controls -- "auto" behaves as before (X: two decades
+  // either side of f0; Y: auto-scaled), "manual" lets start/finish/delta or
+  // min/max be set directly, like dialing an LCR meter's sweep.
+  const [chart1XMode, setChart1XMode] = useState<SweepMode>("auto");
+  const [chart1Start, setChart1Start] = useState(1);
+  const [chart1Finish, setChart1Finish] = useState(1_000_000);
+  const [chart1Delta, setChart1Delta] = useState(1000);
+  const [chart1YMode, setChart1YMode] = useState<SweepMode>("auto");
+  const [chart1YMin, setChart1YMin] = useState(0.1);
+  const [chart1YMax, setChart1YMax] = useState(1000);
+
+  const [chart2XMode, setChart2XMode] = useState<SweepMode>("auto");
+  const [chart2Start, setChart2Start] = useState(1);
+  const [chart2Finish, setChart2Finish] = useState(1_000_000);
+  const [chart2Delta, setChart2Delta] = useState(1000);
+  const [chart2YMode, setChart2YMode] = useState<SweepMode>("auto");
+  const [chart2YMin, setChart2YMin] = useState(0.1);
+  const [chart2YMax, setChart2YMax] = useState(1000);
 
   // R values to compare on the Admittance/Impedance charts. Starts with just
   // the current R; "+ Add" appends whatever R is entered above, so earlier
@@ -85,14 +97,20 @@ export default function Home() {
   }, [mode, presetIndex, lValue, lUnit, cValue, cUnit, rValue, rUnit]);
 
   const f0 = useMemo(() => resonantFreq(L, C), [L, C]);
-  const freqSweep = useMemo(
-    () => buildFrequencySweep(f0, { mode: sweepMode, start: startFreq, finish: finishFreq, delta: deltaFreq }),
-    [f0, sweepMode, startFreq, finishFreq, deltaFreq]
+
+  const chart1Sweep = useMemo(
+    () => buildFrequencySweep(f0, { mode: chart1XMode, start: chart1Start, finish: chart1Finish, delta: chart1Delta }),
+    [f0, chart1XMode, chart1Start, chart1Finish, chart1Delta]
   );
-  const reactance = useMemo(() => reactanceAtFreqs(freqSweep.freqs, L, C), [freqSweep, L, C]);
+  const reactance = useMemo(() => reactanceAtFreqs(chart1Sweep.freqs, L, C), [chart1Sweep, L, C]);
+
+  const chart2Sweep = useMemo(
+    () => buildFrequencySweep(f0, { mode: chart2XMode, start: chart2Start, finish: chart2Finish, delta: chart2Delta }),
+    [f0, chart2XMode, chart2Start, chart2Finish, chart2Delta]
+  );
   const rCurves = useMemo(
-    () => buildRComparisonCurves(freqSweep.freqs, comparisonRList, L, C),
-    [freqSweep, comparisonRList, L, C]
+    () => buildRComparisonCurves(chart2Sweep.freqs, comparisonRList, L, C),
+    [chart2Sweep, comparisonRList, L, C]
   );
   const Zo = useMemo(() => characteristicImpedance(L, C), [L, C]);
   const w0 = useMemo(() => angularResonantFreq(L, C), [L, C]);
@@ -245,73 +263,7 @@ export default function Home() {
             )}
 
             <div className={styles.panelDivider} />
-            <div className={styles.panelTitle}>Frequency sweep</div>
-            <div className={styles.modeToggle}>
-              <button
-                className={sweepMode === "auto" ? styles.active : undefined}
-                onClick={() => setSweepMode("auto")}
-              >
-                Auto (around f0)
-              </button>
-              <button
-                className={sweepMode === "manual" ? styles.active : undefined}
-                onClick={() => setSweepMode("manual")}
-              >
-                Manual
-              </button>
-            </div>
-            {sweepMode === "manual" && (
-              <>
-                <div className={styles.field}>
-                  <label htmlFor="start-freq">Start frequency (Hz)</label>
-                  <input
-                    id="start-freq"
-                    className={styles.input}
-                    type="number"
-                    value={startFreq}
-                    min={0}
-                    onChange={(e) => setStartFreq(Number(e.target.value))}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="finish-freq">Finish frequency (Hz)</label>
-                  <input
-                    id="finish-freq"
-                    className={styles.input}
-                    type="number"
-                    value={finishFreq}
-                    min={0}
-                    onChange={(e) => setFinishFreq(Number(e.target.value))}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="delta-freq">Increment / delta (Hz)</label>
-                  <input
-                    id="delta-freq"
-                    className={styles.input}
-                    type="number"
-                    value={deltaFreq}
-                    min={0}
-                    onChange={(e) => setDeltaFreq(Number(e.target.value))}
-                  />
-                </div>
-                {freqSweep.downsampled && (
-                  <p className={styles.presetNote}>
-                    That delta over this range would be too many points to render smoothly, so the chart shows{" "}
-                    {freqSweep.freqs.length.toLocaleString()} evenly-spaced points across the same start/finish range
-                    instead.
-                  </p>
-                )}
-              </>
-            )}
-
-            <div className={styles.panelDivider} />
             <div className={styles.panelTitle}>Compare R values</div>
-            <p className={styles.presetNote}>
-              Shown on the Impedance chart below, using the L/C above. Change the &quot;Resistance R&quot; field
-              above to a new value, then click &quot;+ Add&quot; below to keep both curves -- clicking Add again
-              without changing R first won&apos;t add a duplicate.
-            </p>
             <div className={styles.rList}>
               {comparisonRList.map((rVal, i) => (
                 <div key={i} className={styles.rListRow}>
@@ -424,14 +376,71 @@ export default function Home() {
                 <input type="checkbox" checked={logY} onChange={(e) => setLogY(e.target.checked)} />
                 Log scale Y-axis (Impedance)
               </label>
-              <RlcChart reactance={reactance} f0={f0} logY={logY} />
+              <div className={styles.chartPanelBody}>
+                <div className={styles.chartCanvasWrap}>
+                  <RlcChart
+                    reactance={reactance}
+                    f0={f0}
+                    logY={logY}
+                    yMin={chart1YMode === "manual" ? chart1YMin : undefined}
+                    yMax={chart1YMode === "manual" ? chart1YMax : undefined}
+                  />
+                </div>
+                <AxisControls
+                  xMode={chart1XMode}
+                  onXModeChange={setChart1XMode}
+                  xStart={chart1Start}
+                  onXStartChange={setChart1Start}
+                  xFinish={chart1Finish}
+                  onXFinishChange={setChart1Finish}
+                  xDelta={chart1Delta}
+                  onXDeltaChange={setChart1Delta}
+                  downsampled={chart1Sweep.downsampled}
+                  pointCount={chart1Sweep.freqs.length}
+                  yMode={chart1YMode}
+                  onYModeChange={setChart1YMode}
+                  yMin={chart1YMin}
+                  onYMinChange={setChart1YMin}
+                  yMax={chart1YMax}
+                  onYMaxChange={setChart1YMax}
+                />
+              </div>
             </div>
 
             <div className={styles.chartPanel}>
               <div className={styles.chartPanelTitle}>
                 Impedance |Z| vs frequency: dips to R at resonance, lower R means higher Q and a sharper dip
               </div>
-              <RComparisonChart freqs={freqSweep.freqs} curves={rCurves} field="impedance" f0={f0} />
+              <div className={styles.chartPanelBody}>
+                <div className={styles.chartCanvasWrap}>
+                  <RComparisonChart
+                    freqs={chart2Sweep.freqs}
+                    curves={rCurves}
+                    field="impedance"
+                    f0={f0}
+                    yMin={chart2YMode === "manual" ? chart2YMin : undefined}
+                    yMax={chart2YMode === "manual" ? chart2YMax : undefined}
+                  />
+                </div>
+                <AxisControls
+                  xMode={chart2XMode}
+                  onXModeChange={setChart2XMode}
+                  xStart={chart2Start}
+                  onXStartChange={setChart2Start}
+                  xFinish={chart2Finish}
+                  onXFinishChange={setChart2Finish}
+                  xDelta={chart2Delta}
+                  onXDeltaChange={setChart2Delta}
+                  downsampled={chart2Sweep.downsampled}
+                  pointCount={chart2Sweep.freqs.length}
+                  yMode={chart2YMode}
+                  onYModeChange={setChart2YMode}
+                  yMin={chart2YMin}
+                  onYMinChange={setChart2YMin}
+                  yMax={chart2YMax}
+                  onYMaxChange={setChart2YMax}
+                />
+              </div>
             </div>
           </div>
         </div>

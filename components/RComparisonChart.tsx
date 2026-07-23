@@ -31,9 +31,11 @@ interface Props {
   curves: RComparisonCurve[];
   field: "admittance" | "impedance";
   f0: number;
+  yMin?: number;
+  yMax?: number;
 }
 
-export default function RComparisonChart({ freqs, curves, field, f0 }: Props) {
+export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax }: Props) {
   const yLabel = field === "admittance" ? "Admittance |Y| = 1/|Z| (log scale)" : "Impedance |Z| (log scale)";
   const yUnit = field === "admittance" ? "" : " Ω";
 
@@ -78,6 +80,8 @@ export default function RComparisonChart({ freqs, curves, field, f0 }: Props) {
             lineWidth: logGridWidth,
           },
           ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
+          min: yMin,
+          max: yMax,
         },
       },
       plugins: {
@@ -105,7 +109,7 @@ export default function RComparisonChart({ freqs, curves, field, f0 }: Props) {
         },
       },
     }),
-    [f0, yLabel, yUnit]
+    [f0, yLabel, yUnit, yMin, yMax]
   );
 
   return (
