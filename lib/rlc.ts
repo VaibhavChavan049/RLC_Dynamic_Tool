@@ -117,7 +117,21 @@ const MAX_SWEEP_POINTS = 2000;
 
 export interface FrequencySweep {
   freqs: number[];
-  downsampled: boolean;
+  downsampled: boolean; // delta was finer than could be rendered smoothly, resampled to MAX_SWEEP_POINTS
+  tooCoarse: boolean; // delta was larger than (finish - start), clamped to just [start, finish]
+  invalidParams: boolean; // start/finish/delta don't make sense (e.g. finish <= start); fell back to auto
+}
+
+function autoSweep(f0: number): number[] {
+  const points = 200;
+  const logStart = Math.log10(f0 / 100);
+  const logStop = Math.log10(f0 * 100);
+  const freqs: number[] = new Array(points);
+  for (let i = 0; i < points; i++) {
+    const t = i / (points - 1);
+    freqs[i] = Math.pow(10, logStart + t * (logStop - logStart));
+  }
+  return freqs;
 }
 
 /**
@@ -128,14 +142,30 @@ export interface FrequencySweep {
  *               exactly like sweeping frequency on an LCR meter
  */
 export function buildFrequencySweep(f0: number, params: SweepParams): FrequencySweep {
-  if (params.mode === "manual" && params.start > 0 && params.finish > params.start && params.delta > 0) {
+  if (params.mode === "manual") {
     const { start, finish, delta } = params;
+    const validParams = start > 0 && finish > start && delta > 0;
+
+    if (!validParams) {
+      // e.g. Finish <= Start, or Delta <= 0 -- these can't be swept, so fall
+      // back to the auto sweep rather than silently producing an empty/
+      // single-point chart. `invalidParams` lets the UI show why.
+      return { freqs: autoSweep(f0), downsampled: false, tooCoarse: false, invalidParams: true };
+    }
+
     const rawCount = Math.floor((finish - start) / delta) + 1;
+
+    if (rawCount < 2) {
+      // Delta is larger than the whole start-finish range -- a line needs
+      // at least 2 points, so just show the two endpoints instead of a
+      // single (invisible) point.
+      return { freqs: [start, finish], downsampled: false, tooCoarse: true, invalidParams: false };
+    }
 
     if (rawCount <= MAX_SWEEP_POINTS) {
       const freqs: number[] = new Array(rawCount);
       for (let i = 0; i < rawCount; i++) freqs[i] = start + i * delta;
-      return { freqs, downsampled: false };
+      return { freqs, downsampled: false, tooCoarse: false, invalidParams: false };
     }
 
     // Delta is finer than we can render smoothly -- keep the requested
@@ -145,18 +175,10 @@ export function buildFrequencySweep(f0: number, params: SweepParams): FrequencyS
       const t = i / (MAX_SWEEP_POINTS - 1);
       freqs[i] = start + t * (finish - start);
     }
-    return { freqs, downsampled: true };
+    return { freqs, downsampled: true, tooCoarse: false, invalidParams: false };
   }
 
-  const points = 200;
-  const logStart = Math.log10(f0 / 100);
-  const logStop = Math.log10(f0 * 100);
-  const freqs: number[] = new Array(points);
-  for (let i = 0; i < points; i++) {
-    const t = i / (points - 1);
-    freqs[i] = Math.pow(10, logStart + t * (logStop - logStart));
-  }
-  return { freqs, downsampled: false };
+  return { freqs: autoSweep(f0), downsampled: false, tooCoarse: false, invalidParams: false };
 }
 
 export interface ReactancePoints {

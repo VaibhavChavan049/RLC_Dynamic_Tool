@@ -76,3 +76,9 @@
   color: var(--muted);
   line-height: 1.35;
 }
+
+.noteWarning {
+  font-size: 0.72rem;
+  color: #e5484d;
+  line-height: 1.35;
+}

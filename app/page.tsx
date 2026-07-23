@@ -42,6 +42,14 @@ const W0_UNITS: Record<string, number> = {
   Hz: 1 / (2 * Math.PI),
 };
 
+// A Chart.js axis with min >= max renders a corrupted chart rather than an
+// error, so an invalid manual Y-range must never reach the chart -- fall
+// back to auto-scaling (undefined min/max) until Min < Max again.
+function effectiveYRange(mode: SweepMode, min: number, max: number): { yMin?: number; yMax?: number } {
+  if (mode === "manual" && min < max) return { yMin: min, yMax: max };
+  return { yMin: undefined, yMax: undefined };
+}
+
 export default function Home() {
   const [mode, setMode] = useState<Mode>("manual");
 
@@ -382,8 +390,7 @@ export default function Home() {
                     reactance={reactance}
                     f0={f0}
                     logY={logY}
-                    yMin={chart1YMode === "manual" ? chart1YMin : undefined}
-                    yMax={chart1YMode === "manual" ? chart1YMax : undefined}
+                    {...effectiveYRange(chart1YMode, chart1YMin, chart1YMax)}
                   />
                 </div>
                 <AxisControls
@@ -396,6 +403,8 @@ export default function Home() {
                   xDelta={chart1Delta}
                   onXDeltaChange={setChart1Delta}
                   downsampled={chart1Sweep.downsampled}
+                  tooCoarse={chart1Sweep.tooCoarse}
+                  invalidParams={chart1Sweep.invalidParams}
                   pointCount={chart1Sweep.freqs.length}
                   yMode={chart1YMode}
                   onYModeChange={setChart1YMode}
@@ -418,8 +427,7 @@ export default function Home() {
                     curves={rCurves}
                     field="impedance"
                     f0={f0}
-                    yMin={chart2YMode === "manual" ? chart2YMin : undefined}
-                    yMax={chart2YMode === "manual" ? chart2YMax : undefined}
+                    {...effectiveYRange(chart2YMode, chart2YMin, chart2YMax)}
                   />
                 </div>
                 <AxisControls
@@ -432,6 +440,8 @@ export default function Home() {
                   xDelta={chart2Delta}
                   onXDeltaChange={setChart2Delta}
                   downsampled={chart2Sweep.downsampled}
+                  tooCoarse={chart2Sweep.tooCoarse}
+                  invalidParams={chart2Sweep.invalidParams}
                   pointCount={chart2Sweep.freqs.length}
                   yMode={chart2YMode}
                   onYModeChange={setChart2YMode}

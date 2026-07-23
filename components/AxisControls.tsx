@@ -13,6 +13,8 @@ interface Props {
   xDelta: number;
   onXDeltaChange: (value: number) => void;
   downsampled: boolean;
+  tooCoarse: boolean;
+  invalidParams: boolean;
   pointCount: number;
 
   yMode: SweepMode;
@@ -39,6 +41,8 @@ export default function AxisControls({
   xDelta,
   onXDeltaChange,
   downsampled,
+  tooCoarse,
+  invalidParams,
   pointCount,
   yMode,
   onYModeChange,
@@ -91,6 +95,17 @@ export default function AxisControls({
                 onChange={(e) => onXDeltaChange(Number(e.target.value))}
               />
             </label>
+            {invalidParams && (
+              <p className={styles.noteWarning}>
+                Finish must be greater than Start, and Delta must be greater than 0 -- showing the auto sweep until fixed.
+              </p>
+            )}
+            {tooCoarse && !invalidParams && (
+              <p className={styles.noteWarning}>
+                Delta is larger than the whole Start-Finish range, so only those 2 points can be shown -- lower the
+                delta to see more of the curve.
+              </p>
+            )}
             {downsampled && (
               <p className={styles.note}>Delta too fine for this range -- resampled to {pointCount.toLocaleString()} points.</p>
             )}
@@ -128,6 +143,9 @@ export default function AxisControls({
                 onChange={(e) => onYMaxChange(Number(e.target.value))}
               />
             </label>
+            {yMin >= yMax && (
+              <p className={styles.noteWarning}>Max must be greater than Min -- showing auto range until fixed.</p>
+            )}
           </>
         )}
       </div>
