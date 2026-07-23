@@ -97,9 +97,19 @@ export default function Home() {
   const Zo = useMemo(() => characteristicImpedance(L, C), [L, C]);
   const w0 = useMemo(() => angularResonantFreq(L, C), [L, C]);
   const Q = useMemo(() => qualityFactor(R, L, C), [R, L, C]);
+  const isRAlreadyAdded = useMemo(
+    () => comparisonRList.some((r) => Math.abs(r - R) < 1e-12),
+    [comparisonRList, R]
+  );
 
   function addCurrentRToComparison() {
-    setComparisonRList((prev) => [...prev, R]);
+    setComparisonRList((prev) => {
+      // Skip if this R is already in the list (e.g. clicking "+ Add" again
+      // without changing the R field above would otherwise add the exact
+      // same curve twice).
+      const alreadyAdded = prev.some((r) => Math.abs(r - R) < 1e-12);
+      return alreadyAdded ? prev : [...prev, R];
+    });
   }
 
   function removeComparisonR(index: number) {
@@ -298,8 +308,9 @@ export default function Home() {
             <div className={styles.panelDivider} />
             <div className={styles.panelTitle}>Compare R values</div>
             <p className={styles.presetNote}>
-              Shown on the Admittance and Impedance charts below, using the L/C above. Add the current R (
-              {R.toPrecision(3)} Ω), change R, and add again to keep both curves.
+              Shown on the Impedance chart below, using the L/C above. Change the &quot;Resistance R&quot; field
+              above to a new value, then click &quot;+ Add&quot; below to keep both curves -- clicking Add again
+              without changing R first won&apos;t add a duplicate.
             </p>
             <div className={styles.rList}>
               {comparisonRList.map((rVal, i) => (
@@ -313,8 +324,10 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <button className={styles.addButton} onClick={addCurrentRToComparison}>
-              + Add current R ({R.toPrecision(3)} Ω) to comparison
+            <button className={styles.addButton} onClick={addCurrentRToComparison} disabled={isRAlreadyAdded}>
+              {isRAlreadyAdded
+                ? `R = ${R.toPrecision(3)} Ω already added -- change R above to add another`
+                : `+ Add current R (${R.toPrecision(3)} Ω) to comparison`}
             </button>
           </div>
 
@@ -416,16 +429,9 @@ export default function Home() {
 
             <div className={styles.chartPanel}>
               <div className={styles.chartPanelTitle}>
-                Impedance |Z| vs frequency: dips to R at resonance (reciprocal of the admittance chart below)
+                Impedance |Z| vs frequency: dips to R at resonance, lower R means higher Q and a sharper dip
               </div>
               <RComparisonChart freqs={freqSweep.freqs} curves={rCurves} field="impedance" f0={f0} />
-            </div>
-
-            <div className={styles.chartPanel}>
-              <div className={styles.chartPanelTitle}>
-                Admittance |Y| vs quality factor (Q): lower R means higher Q and a sharper peak
-              </div>
-              <RComparisonChart freqs={freqSweep.freqs} curves={rCurves} field="admittance" f0={f0} />
             </div>
           </div>
         </div>

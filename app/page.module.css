@@ -330,3 +330,13 @@
 .addButton:hover {
   background: var(--accent-soft);
 }
+
+.addButton:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.addButton:disabled:hover {
+  background: transparent;
+}
