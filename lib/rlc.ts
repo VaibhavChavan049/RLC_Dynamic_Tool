@@ -99,6 +99,41 @@ export function admittanceMagnitude(f: number, R: number, L: number, C: number):
   return 1 / impedanceMagnitude(f, R, L, C);
 }
 
+export type CircuitType = "series" | "parallel";
+
+/**
+ * Q for a PARALLEL RLC tank: Q = R * sqrt(C/L) = R / Zo. Note this is the
+ * INVERSE relationship to series (qualityFactor above, Q = Zo/R): here a
+ * HIGHER R gives a higher Q / sharper resonance, because R is now a shunt
+ * path across the tank rather than a series bottleneck.
+ */
+export function parallelQualityFactor(R: number, L: number, C: number): number {
+  return R * Math.sqrt(C / L);
+}
+
+/**
+ * |Z(f)| for a PARALLEL RLC tank. Unlike series (impedances add directly),
+ * parallel branches share the same voltage, so ADMITTANCES add instead:
+ *   G  = 1/R                  -- conductance of the resistor branch
+ *   Bc = 2*pi*f*C = 1/Xc       -- capacitive susceptance
+ *   Bl = 1/(2*pi*f*L) = 1/XL   -- inductive susceptance
+ *   |Y| = sqrt(G^2 + (Bc - Bl)^2),  |Z| = 1/|Y|
+ * At resonance Bc = Bl, so |Y| is at its MINIMUM (= G), meaning |Z| PEAKS
+ * to R -- the mirror image of the series circuit, which dips to R instead.
+ */
+export function parallelImpedanceMagnitude(f: number, R: number, L: number, C: number): number {
+  const g = 1 / R;
+  const bc = 2 * Math.PI * f * C;
+  const bl = 1 / (2 * Math.PI * f * L);
+  const y = Math.sqrt(g * g + (bc - bl) * (bc - bl));
+  return 1 / y;
+}
+
+/** |Y(f)| for a parallel RLC tank: dips to 1/R at resonance (mirror of the series admittance peak). */
+export function parallelAdmittanceMagnitude(f: number, R: number, L: number, C: number): number {
+  return 1 / parallelImpedanceMagnitude(f, R, L, C);
+}
+
 export type SweepMode = "auto" | "manual";
 
 export interface SweepParams {
@@ -205,21 +240,32 @@ export interface RComparisonCurve {
 }
 
 /**
- * For each R value in `rList`, compute |Y(f)| and |Z(f)| across `freqs`.
- * Feeds both the Admittance chart (peaks at resonance) and the Impedance
- * chart (dips at resonance, since |Z| = 1/|Y|) from the same underlying
- * data, so a manually-built list of R values (e.g. R=1 Ω kept, then R=5 Ω
- * added on top) shows up consistently on both.
+ * For each R value in `rList`, compute |Y(f)| and |Z(f)| across `freqs`,
+ * using either the series or the parallel formula depending on
+ * `circuitType` (they differ in both the impedance formula and the Q
+ * formula -- see impedanceMagnitude/parallelImpedanceMagnitude above).
+ * Feeds the Impedance/Admittance chart, so a manually-built list of R
+ * values (e.g. R=1 Ω kept, then R=5 Ω added on top) shows up consistently.
  */
-export function buildRComparisonCurves(freqs: number[], rList: number[], L: number, C: number): RComparisonCurve[] {
+export function buildRComparisonCurves(
+  freqs: number[],
+  rList: number[],
+  L: number,
+  C: number,
+  circuitType: CircuitType
+): RComparisonCurve[] {
   return rList.map((R) => {
     const admittance: number[] = new Array(freqs.length);
     const impedance: number[] = new Array(freqs.length);
     for (let i = 0; i < freqs.length; i++) {
-      const z = impedanceMagnitude(freqs[i], R, L, C);
+      const z =
+        circuitType === "series"
+          ? impedanceMagnitude(freqs[i], R, L, C)
+          : parallelImpedanceMagnitude(freqs[i], R, L, C);
       impedance[i] = z;
       admittance[i] = 1 / z;
     }
-    return { R, Q: qualityFactor(R, L, C), admittance, impedance };
+    const Q = circuitType === "series" ? qualityFactor(R, L, C) : parallelQualityFactor(R, L, C);
+    return { R, Q, admittance, impedance };
   });
 }

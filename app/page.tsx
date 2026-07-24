@@ -11,11 +11,13 @@ import {
   characteristicImpedance,
   angularResonantFreq,
   qualityFactor,
+  parallelQualityFactor,
   resonantFreq,
   buildFrequencySweep,
   reactanceAtFreqs,
   buildRComparisonCurves,
   type SweepMode,
+  type CircuitType,
 } from "@/lib/rlc";
 
 // Chart.js touches the DOM/canvas, so it must only run in the browser.
@@ -42,6 +44,35 @@ const W0_UNITS: Record<string, number> = {
   Hz: 1 / (2 * Math.PI),
 };
 
+// Formulas box content: Xc/XL/w0/f0/Zo are the same physics regardless of
+// topology (they depend only on L and C), but Q and the impedance/admittance
+// formulas differ -- series adds impedances directly, parallel adds
+// admittances instead (see lib/rlc.ts for the derivations).
+const SERIES_FORMULAS: [string, string][] = [
+  ["Capacitive reactance Xc", "Xc = 1 / (2π·f·C)"],
+  ["Inductive reactance XL", "XL = 2π·f·L"],
+  ["Angular resonant frequency w0", "w0 = 1 / √(L·C)"],
+  ["Resonant frequency f0", "f0 = w0 / (2π)"],
+  ["Characteristic impedance Zo", "Zo = √(L / C)"],
+  ["Quality factor Q", "Q = (1 / R)·√(L / C) = Zo / R"],
+  ["Impedance magnitude |Z|", "|Z| = √(R² + (XL − Xc)²)"],
+  ["Admittance magnitude |Y|", "|Y| = 1 / |Z|"],
+];
+
+const PARALLEL_FORMULAS: [string, string][] = [
+  ["Capacitive reactance Xc", "Xc = 1 / (2π·f·C)"],
+  ["Inductive reactance XL", "XL = 2π·f·L"],
+  ["Angular resonant frequency w0", "w0 = 1 / √(L·C)"],
+  ["Resonant frequency f0", "f0 = w0 / (2π)"],
+  ["Characteristic impedance Zo", "Zo = √(L / C)"],
+  ["Conductance G", "G = 1 / R"],
+  ["Capacitive susceptance Bc", "Bc = 2π·f·C = 1 / Xc"],
+  ["Inductive susceptance Bl", "Bl = 1 / (2π·f·L) = 1 / XL"],
+  ["Quality factor Q", "Q = R·√(C / L) = R / Zo"],
+  ["Admittance magnitude |Y|", "|Y| = √(G² + (Bc − Bl)²)"],
+  ["Impedance magnitude |Z|", "|Z| = 1 / |Y|"],
+];
+
 // A Chart.js axis with min >= max renders a corrupted chart rather than an
 // error, so an invalid manual Y-range must never reach the chart -- fall
 // back to auto-scaling (undefined min/max) until Min < Max again.
@@ -52,6 +83,12 @@ function effectiveYRange(mode: SweepMode, min: number, max: number): { yMin?: nu
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("manual");
+  // Series (impedances add, |Z| dips to R at resonance) vs Parallel
+  // (admittances add, |Z| PEAKS to R at resonance instead) -- switches the
+  // Q formula, the Impedance/Admittance chart's math, and the formulas box.
+  // Chart 1 (Xc/XL crossing) is untouched by this: XL=Xc at resonance is a
+  // property of L and C alone, true for both topologies.
+  const [circuitType, setCircuitType] = useState<CircuitType>("series");
 
   const [lValue, setLValue] = useState(1);
   const [lUnit, setLUnit] = useState("mH (millihenry)");
@@ -119,12 +156,15 @@ export default function Home() {
     [f0, chart2XMode, chart2Start, chart2Finish, chart2NumPoints]
   );
   const rCurves = useMemo(
-    () => buildRComparisonCurves(chart2Sweep.freqs, comparisonRList, L, C),
-    [chart2Sweep, comparisonRList, L, C]
+    () => buildRComparisonCurves(chart2Sweep.freqs, comparisonRList, L, C, circuitType),
+    [chart2Sweep, comparisonRList, L, C, circuitType]
   );
   const Zo = useMemo(() => characteristicImpedance(L, C), [L, C]);
   const w0 = useMemo(() => angularResonantFreq(L, C), [L, C]);
-  const Q = useMemo(() => qualityFactor(R, L, C), [R, L, C]);
+  const Q = useMemo(
+    () => (circuitType === "series" ? qualityFactor(R, L, C) : parallelQualityFactor(R, L, C)),
+    [circuitType, R, L, C]
+  );
   const isRAlreadyAdded = useMemo(
     () => comparisonRList.some((r) => Math.abs(r - R) < 1e-12),
     [comparisonRList, R]
@@ -155,8 +195,25 @@ export default function Home() {
             </div>
             <div className={styles.tagline}>DRF Engineering Services, LLC. Champions of Power</div>
           </div>
-          <h1>Series RLC Tank: Resonant Frequency Calculator</h1>
+          <h1>{circuitType === "series" ? "Series" : "Parallel"} RLC Tank: Resonant Frequency Calculator</h1>
           <p>Enter L, C, R in any unit and see the Xc/XL crossing chart update instantly.</p>
+          <div className={styles.circuitTypeRow}>
+            <span className={styles.circuitTypeLabel}>Circuit type</span>
+            <div className={styles.modeToggle}>
+              <button
+                className={circuitType === "series" ? styles.active : undefined}
+                onClick={() => setCircuitType("series")}
+              >
+                Series RLC
+              </button>
+              <button
+                className={circuitType === "parallel" ? styles.active : undefined}
+                onClick={() => setCircuitType("parallel")}
+              >
+                Parallel RLC
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className={styles.layout}>
@@ -278,7 +335,12 @@ export default function Home() {
               {comparisonRList.map((rVal, i) => (
                 <div key={i} className={styles.rListRow}>
                   <span>
-                    R = {rVal.toPrecision(3)} Ω (Q = {qualityFactor(rVal, L, C).toFixed(2)})
+                    R = {rVal.toPrecision(3)} Ω (Q ={" "}
+                    {(circuitType === "series"
+                      ? qualityFactor(rVal, L, C)
+                      : parallelQualityFactor(rVal, L, C)
+                    ).toFixed(2)}
+                    )
                   </span>
                   <button className={styles.rListRemove} onClick={() => removeComparisonR(i)} aria-label="Remove">
                     ×
@@ -295,40 +357,14 @@ export default function Home() {
 
           <div className={styles.main}>
             <details className={styles.formulasBox}>
-              <summary>Formulas used</summary>
+              <summary>Formulas used ({circuitType === "series" ? "Series" : "Parallel"} RLC)</summary>
               <div className={styles.formulasList}>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Capacitive reactance Xc</span>
-                  <span className={styles.formulaExpr}>Xc = 1 / (2π·f·C)</span>
-                </div>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Inductive reactance XL</span>
-                  <span className={styles.formulaExpr}>XL = 2π·f·L</span>
-                </div>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Angular resonant frequency w0</span>
-                  <span className={styles.formulaExpr}>w0 = 1 / √(L·C)</span>
-                </div>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Resonant frequency f0</span>
-                  <span className={styles.formulaExpr}>f0 = w0 / (2π)</span>
-                </div>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Characteristic impedance Zo</span>
-                  <span className={styles.formulaExpr}>Zo = √(L / C)</span>
-                </div>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Quality factor Q</span>
-                  <span className={styles.formulaExpr}>Q = (1 / R)·√(L / C)</span>
-                </div>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Impedance magnitude |Z|</span>
-                  <span className={styles.formulaExpr}>|Z| = √(R² + (XL − Xc)²)</span>
-                </div>
-                <div className={styles.formulaRow}>
-                  <span className={styles.formulaName}>Admittance magnitude |Y|</span>
-                  <span className={styles.formulaExpr}>|Y| = 1 / |Z|</span>
-                </div>
+                {(circuitType === "series" ? SERIES_FORMULAS : PARALLEL_FORMULAS).map(([name, expr]) => (
+                  <div className={styles.formulaRow} key={name}>
+                    <span className={styles.formulaName}>{name}</span>
+                    <span className={styles.formulaExpr}>{expr}</span>
+                  </div>
+                ))}
               </div>
             </details>
 
@@ -420,7 +456,9 @@ export default function Home() {
 
             <div className={styles.chartPanel}>
               <div className={styles.chartPanelTitle}>
-                Impedance |Z| dips to R at resonance, Admittance |Y| = 1/|Z| peaks there -- lower R means higher Q and a sharper curve
+                {circuitType === "series"
+                  ? "Impedance |Z| dips to R at resonance, Admittance |Y| = 1/|Z| peaks there -- lower R means higher Q and a sharper curve"
+                  : "Impedance |Z| PEAKS to R at resonance, Admittance |Y| = 1/|Z| dips there -- higher R means higher Q and a sharper curve (opposite of series)"}
               </div>
               <div className={styles.chartPanelBody}>
                 <div className={styles.chartCanvasWrap}>
