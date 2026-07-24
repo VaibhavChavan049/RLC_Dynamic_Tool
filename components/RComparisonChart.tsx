@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Chart as ChartJS,
   LogarithmicScale,
@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
   type ChartOptions,
+  type ChartDataset,
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
 import zoomPlugin from "chartjs-plugin-zoom";
@@ -29,41 +30,82 @@ const MAJOR_GRID_COLOR = "rgba(128, 128, 128, 0.4)";
 const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
+// Impedance is drawn solid, Admittance dashed -- same color per R value, so
+// the two curve families stay visually distinguishable even when both are
+// shown together on one board (they're reciprocals: |Y| = 1/|Z|).
+const IMPEDANCE_DASH: number[] = [];
+const ADMITTANCE_DASH = [6, 4];
+
 interface Props {
   freqs: number[];
   curves: RComparisonCurve[];
-  field: "admittance" | "impedance";
   f0: number;
   yMin?: number;
   yMax?: number;
 }
 
-export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax }: Props) {
-  const yLabel = field === "admittance" ? "Admittance |Y| = 1/|Z| (log scale)" : "Impedance |Z| (log scale)";
-  const yUnit = field === "admittance" ? "" : " Ω";
+export default function RComparisonChart({ freqs, curves, f0, yMin, yMax }: Props) {
   const chartRef = useRef<ChartJS<"line">>(null);
+  // Both metrics shown on the board by default; unchecking one leaves only
+  // the other visible -- these are independent, not a single either/or
+  // toggle, so both can also be hidden if the user unchecks both.
+  const [showImpedance, setShowImpedance] = useState(true);
+  const [showAdmittance, setShowAdmittance] = useState(true);
 
   function handleDownloadCsv() {
-    const headers = ["Point", "Frequency_Hz", ...curves.map((c) => `R=${c.R.toPrecision(3)}_${field}`)];
-    const rows = freqs.map((f, i) => [i + 1, f, ...curves.map((c) => c[field][i])]);
-    downloadCsv(`rlc_${field}_sweep.csv`, headers, rows);
+    const headers = [
+      "Point",
+      "Frequency_Hz",
+      ...curves.flatMap((c) => [`Impedance_R=${c.R.toPrecision(3)}_Ohm`, `Admittance_R=${c.R.toPrecision(3)}_Siemens`]),
+    ];
+    const rows = freqs.map((f, i) => [
+      i + 1,
+      f,
+      ...curves.flatMap((c) => [c.impedance[i], c.admittance[i]]),
+    ]);
+    downloadCsv("rlc_impedance_admittance_sweep.csv", headers, rows);
   }
 
-  const data = useMemo(
-    () => ({
-      datasets: curves.map((curve, i) => ({
-        label: `R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
-        data: freqs.map((f, j) => ({ x: f, y: curve[field][j] })),
-        borderColor: CURVE_COLORS[i % CURVE_COLORS.length],
-        backgroundColor: CURVE_COLORS[i % CURVE_COLORS.length],
-        borderWidth: 2,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        tension: 0,
-      })),
-    }),
-    [freqs, curves, field]
-  );
+  const data = useMemo(() => {
+    const datasets: ChartDataset<"line", { x: number; y: number }[]>[] = [];
+    curves.forEach((curve, i) => {
+      const color = CURVE_COLORS[i % CURVE_COLORS.length];
+      if (showImpedance) {
+        datasets.push({
+          label: `Z: R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
+          data: freqs.map((f, j) => ({ x: f, y: curve.impedance[j] })),
+          borderColor: color,
+          backgroundColor: color,
+          borderDash: IMPEDANCE_DASH,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0,
+        });
+      }
+      if (showAdmittance) {
+        datasets.push({
+          label: `Y: R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
+          data: freqs.map((f, j) => ({ x: f, y: curve.admittance[j] })),
+          borderColor: color,
+          backgroundColor: color,
+          borderDash: ADMITTANCE_DASH,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0,
+        });
+      }
+    });
+    return { datasets };
+  }, [freqs, curves, showImpedance, showAdmittance]);
+
+  const yLabel =
+    showImpedance && showAdmittance
+      ? "Impedance [Ω] (solid) / Admittance [S] (dashed) -- log scale"
+      : showAdmittance
+        ? "Admittance |Y| = 1/|Z| [S] (log scale)"
+        : "Impedance |Z| [Ω] (log scale)";
 
   const options: ChartOptions<"line"> = useMemo(
     () => ({
@@ -106,7 +148,13 @@ export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax 
         tooltip: {
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
-            label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toExponential(3)}${yUnit}`,
+            label: (ctx) => {
+              const isAdmittance = ctx.dataset.label?.startsWith("Y:");
+              const value = ctx.parsed.y as number;
+              return isAdmittance
+                ? `${ctx.dataset.label}: ${value.toExponential(3)} S`
+                : `${ctx.dataset.label}: ${value.toExponential(3)} Ω`;
+            },
           },
         },
         annotation: {
@@ -133,7 +181,7 @@ export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax 
         },
       },
     }),
-    [f0, yLabel, yUnit, yMin, yMax]
+    [f0, yLabel, yMin, yMax]
   );
 
   function zoomIn() {
@@ -148,6 +196,19 @@ export default function RComparisonChart({ freqs, curves, field, f0, yMin, yMax 
 
   return (
     <div>
+      <div className={styles.metricToggleRow}>
+        <label>
+          <input type="checkbox" checked={showImpedance} onChange={(e) => setShowImpedance(e.target.checked)} />
+          Impedance |Z| (Ω)
+        </label>
+        <label>
+          <input type="checkbox" checked={showAdmittance} onChange={(e) => setShowAdmittance(e.target.checked)} />
+          Admittance |Y| = 1/|Z| (S)
+        </label>
+      </div>
+      {!showImpedance && !showAdmittance && (
+        <p className={styles.noteWarning}>Both metrics are hidden -- check at least one box above to see a curve.</p>
+      )}
       <div style={{ height: 420, width: "100%" }}>
         <Line ref={chartRef} data={data} options={options} />
       </div>

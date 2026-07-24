@@ -19,3 +19,25 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.metricToggleRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.metricToggleRow label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.noteWarning {
+  font-size: 0.78rem;
+  color: #e5484d;
+  margin-bottom: 0.5rem;
+}

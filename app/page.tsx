@@ -420,14 +420,13 @@ export default function Home() {
 
             <div className={styles.chartPanel}>
               <div className={styles.chartPanelTitle}>
-                Impedance |Z| vs frequency: dips to R at resonance, lower R means higher Q and a sharper dip
+                Impedance |Z| dips to R at resonance, Admittance |Y| = 1/|Z| peaks there -- lower R means higher Q and a sharper curve
               </div>
               <div className={styles.chartPanelBody}>
                 <div className={styles.chartCanvasWrap}>
                   <RComparisonChart
                     freqs={chart2Sweep.freqs}
                     curves={rCurves}
-                    field="impedance"
                     f0={f0}
                     {...effectiveYRange(chart2YMode, chart2YMin, chart2YMax)}
                   />
