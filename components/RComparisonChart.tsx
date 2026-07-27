@@ -135,6 +135,11 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
       scales: {
         x: {
           type: "logarithmic",
+          // See RlcChart.tsx: "bounds" defaults to "ticks" in Chart.js,
+          // which snaps the axis's real min/max to Chart.js's own internal
+          // tick generation instead of the actual requested Start/Finish.
+          // "data" keeps the axis honest to the real range.
+          bounds: "data",
           afterBuildTicks: buildLogGraphPaperTicks,
           title: { display: true, text: "Frequency [Hz] (log scale)", color: AXIS_TEXT_COLOR },
           grid: {
@@ -145,6 +150,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         },
         y: {
           type: "logarithmic",
+          bounds: "data",
           afterBuildTicks: buildLogGraphPaperTicks,
           title: { display: true, text: yLabel, color: AXIS_TEXT_COLOR },
           grid: {

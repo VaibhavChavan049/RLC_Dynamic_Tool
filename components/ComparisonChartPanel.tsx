@@ -69,6 +69,15 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
     [rList, manualR]
   );
 
+  // Tracks the LIVE "Resistance R" field above (unlike rList, which is only
+  // seeded from R once at creation) -- so if you change R after this chart
+  // already exists, one click adds that new current value instead of
+  // having to retype it into the manual field below.
+  const isCurrentRAlreadyAdded = useMemo(
+    () => rList.some((r) => Math.abs(r - R) < 1e-12),
+    [rList, R]
+  );
+
   function addR(value: number) {
     setRList((prev) => {
       const alreadyAdded = prev.some((r) => Math.abs(r - value) < 1e-12);
@@ -105,6 +114,11 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
               </div>
             ))}
           </div>
+          <button className={styles.addButton} onClick={() => addR(R)} disabled={isCurrentRAlreadyAdded}>
+            {isCurrentRAlreadyAdded
+              ? `R = ${R.toPrecision(3)} Ω already added -- change R above to add another`
+              : `+ Add current R (${R.toPrecision(3)} Ω)`}
+          </button>
           <div className={styles.manualCompareRow}>
             <input
               className={styles.input}

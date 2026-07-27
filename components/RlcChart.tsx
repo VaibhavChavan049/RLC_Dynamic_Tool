@@ -107,6 +107,13 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
       scales: {
         x: {
           type: "logarithmic",
+          // Chart.js's own scale option `bounds` defaults to "ticks", which
+          // snaps the axis's actual min/max to Chart.js's OWN internal tick
+          // generation (run before afterBuildTicks below ever sees it) --
+          // e.g. a Finish of 200,000 Hz would get silently clamped to the
+          // 100,000 gridline since that's a "nicer" tick boundary. "data"
+          // makes the axis span the real requested Start/Finish exactly.
+          bounds: "data",
           afterBuildTicks: buildLogGraphPaperTicks,
           title: { display: true, text: "Frequency [Hz] (log scale)", color: AXIS_TEXT_COLOR },
           grid: {
@@ -118,6 +125,7 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
         y: logY
           ? {
               type: "logarithmic",
+              bounds: "data",
               afterBuildTicks: buildLogGraphPaperTicks,
               title: { display: true, text: "Impedance [Ω] (log scale)", color: AXIS_TEXT_COLOR },
               grid: {
