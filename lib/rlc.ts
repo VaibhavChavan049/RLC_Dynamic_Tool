@@ -83,6 +83,19 @@ export function qualityFactor(R: number, L: number, C: number): number {
   return (1 / R) * Math.sqrt(L / C);
 }
 
+/**
+ * BW = f0 / Q: half-power bandwidth (Hz) -- the width of the resonance
+ * curve between its two half-power (cutoff) frequencies. Higher Q gives a
+ * narrower BW (sharper resonance); lower Q gives a wider one. This f0/Q
+ * relationship holds for both topologies (Q already encodes which one via
+ * qualityFactor vs parallelQualityFactor above); for a SERIES tank it's
+ * algebraically equivalent to BW = R / (2*pi*L), and for a PARALLEL tank
+ * to BW = 1 / (2*pi*R*C) -- the textbook forms in terms of R, L, C directly.
+ */
+export function bandwidth(f0: number, Q: number): number {
+  return f0 / Q;
+}
+
 /** |Z(f)| = sqrt(R^2 + (XL(f) - Xc(f))^2): series RLC impedance magnitude. */
 export function impedanceMagnitude(f: number, R: number, L: number, C: number): number {
   const xl = 2 * Math.PI * f * L;

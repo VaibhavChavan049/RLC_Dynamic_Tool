@@ -172,7 +172,7 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
             {...effectiveYRange(yMode, yMin, yMax)}
           />
 
-          <QualityFactorChart curves={curves} />
+          <QualityFactorChart curves={curves} f0={f0} />
 
           {canRemove && (
             <button className={styles.rListRemove} onClick={onRemove} style={{ marginTop: "0.75rem" }}>

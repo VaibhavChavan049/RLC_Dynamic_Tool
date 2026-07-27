@@ -11,7 +11,7 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
-import type { RComparisonCurve } from "@/lib/rlc";
+import { bandwidth, type RComparisonCurve } from "@/lib/rlc";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -20,34 +20,56 @@ const BAR_COLORS = ["#1863dc", "#e5484d", "#2f9e58", "#f5a623", "#8b5cf6", "#00a
 const AXIS_TEXT_COLOR = "#8a8f98";
 const GRID_COLOR = "rgba(128, 128, 128, 0.15)";
 
+type Metric = "Q" | "R" | "BW";
+
+const METRIC_LABEL: Record<Metric, string> = {
+  Q: "Quality factor Q",
+  R: "R (Ω)",
+  BW: "Bandwidth BW (Hz)",
+};
+
+const METRIC_UNIT: Record<Metric, string> = {
+  Q: "",
+  R: " Ω",
+  BW: " Hz",
+};
+
 interface Props {
   curves: RComparisonCurve[];
+  f0: number;
 }
 
 /**
- * Q is a single number per R (it doesn't vary with frequency), so it can't
- * be a frequency-sweep line like the other charts -- a bar per R value in
- * the comparison list is the natural way to see them side by side. A
- * toggle switches the bars between showing Q and showing R itself (never
- * both on one axis -- R is in Ohms and Q is unitless, mixing them on one
- * scale would be misleading).
+ * Q, R, and Bandwidth (BW = f0/Q) are each a single number per R (none vary
+ * with frequency), so they can't be frequency-sweep lines like the other
+ * charts -- a bar per R value in the comparison list is the natural way to
+ * see them side by side. A toggle switches the bars between the three
+ * metrics (never combined on one axis -- Ohms, unitless, and Hz mixed
+ * together would be misleading).
  */
-export default function QualityFactorChart({ curves }: Props) {
-  const [metric, setMetric] = useState<"Q" | "R">("Q");
+export default function QualityFactorChart({ curves, f0 }: Props) {
+  const [metric, setMetric] = useState<Metric>("Q");
+
+  function valueFor(curve: RComparisonCurve): number {
+    if (metric === "Q") return curve.Q;
+    if (metric === "R") return curve.R;
+    return bandwidth(f0, curve.Q);
+  }
 
   const data = useMemo(
     () => ({
       labels: curves.map((c) => `R = ${c.R.toPrecision(3)} Ω`),
       datasets: [
         {
-          label: metric === "Q" ? "Quality factor Q" : "R (Ω)",
-          data: curves.map((c) => (metric === "Q" ? c.Q : c.R)),
+          label: METRIC_LABEL[metric],
+          data: curves.map((c) => valueFor(c)),
           backgroundColor: curves.map((_, i) => BAR_COLORS[i % BAR_COLORS.length]),
           borderRadius: 4,
         },
       ],
     }),
-    [curves, metric]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [curves, metric, f0]
   );
 
   const options: ChartOptions<"bar"> = useMemo(
@@ -62,7 +84,7 @@ export default function QualityFactorChart({ curves }: Props) {
         },
         y: {
           beginAtZero: true,
-          title: { display: true, text: metric === "Q" ? "Quality factor Q" : "R (Ω)", color: AXIS_TEXT_COLOR },
+          title: { display: true, text: METRIC_LABEL[metric], color: AXIS_TEXT_COLOR },
           ticks: { color: AXIS_TEXT_COLOR },
           grid: { color: GRID_COLOR },
         },
@@ -71,7 +93,7 @@ export default function QualityFactorChart({ curves }: Props) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (ctx) => `${ctx.label}: ${(ctx.parsed.y as number).toFixed(3)}${metric === "R" ? " Ω" : ""}`,
+            label: (ctx) => `${ctx.label}: ${(ctx.parsed.y as number).toFixed(3)}${METRIC_UNIT[metric]}`,
           },
         },
       },
@@ -90,6 +112,10 @@ export default function QualityFactorChart({ curves }: Props) {
         <label>
           <input type="radio" checked={metric === "R"} onChange={() => setMetric("R")} />
           R value
+        </label>
+        <label>
+          <input type="radio" checked={metric === "BW"} onChange={() => setMetric("BW")} />
+          Bandwidth BW
         </label>
       </div>
       <div style={{ height: 280, width: "100%" }}>

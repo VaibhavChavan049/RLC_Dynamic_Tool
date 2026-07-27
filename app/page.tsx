@@ -12,6 +12,7 @@ import {
   angularResonantFreq,
   qualityFactor,
   parallelQualityFactor,
+  bandwidth,
   resonantFreq,
   buildFrequencySweep,
   reactanceAtFreqs,
@@ -124,6 +125,7 @@ const SERIES_FORMULAS: [string, string][] = [
   ["Resonant frequency f0", "f0 = w0 / (2π)"],
   ["Characteristic impedance Zo", "Zo = √(L / C)"],
   ["Quality factor Q", "Q = (1 / R)·√(L / C) = Zo / R"],
+  ["Bandwidth BW", "BW = R / (2π·L) = f0 / Q"],
   ["Impedance magnitude |Z|", "|Z| = √(R² + (XL − Xc)²)"],
   ["Admittance magnitude |Y|", "|Y| = 1 / |Z|"],
 ];
@@ -138,6 +140,7 @@ const PARALLEL_FORMULAS: [string, string][] = [
   ["Capacitive susceptance Bc", "Bc = 2π·f·C = 1 / Xc"],
   ["Inductive susceptance Bl", "Bl = 1 / (2π·f·L) = 1 / XL"],
   ["Quality factor Q", "Q = R·√(C / L) = R / Zo"],
+  ["Bandwidth BW", "BW = 1 / (2π·R·C) = f0 / Q"],
   ["Admittance magnitude |Y|", "|Y| = √(G² + (Bc − Bl)²)"],
   ["Impedance magnitude |Z|", "|Z| = 1 / |Y|"],
 ];
@@ -264,6 +267,7 @@ export default function Home() {
     () => (circuitType === "series" ? qualityFactor(R, L, C) : parallelQualityFactor(R, L, C)),
     [circuitType, R, L, C]
   );
+  const BW = useMemo(() => bandwidth(f0, Q), [f0, Q]);
 
   return (
     <div className={styles.page}>
@@ -498,6 +502,10 @@ export default function Home() {
               <div className={styles.metricCard}>
                 <div className={styles.metricLabel}>Quality factor Q</div>
                 <div className={styles.metricValue}>{Q.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+              </div>
+              <div className={styles.metricCard}>
+                <div className={styles.metricLabel}>Bandwidth BW</div>
+                <div className={styles.metricValue}>{BW.toLocaleString(undefined, { maximumFractionDigits: 4 })} Hz</div>
               </div>
             </div>
 
