@@ -14,7 +14,13 @@ import {
 import annotationPlugin from "chartjs-plugin-annotation";
 import zoomPlugin from "chartjs-plugin-zoom";
 import { Line } from "react-chartjs-2";
-import type { RComparisonCurve } from "@/lib/rlc";
+import {
+  buildExportFrequencies,
+  buildRComparisonCurves,
+  type RComparisonCurve,
+  type CircuitType,
+  type SweepParams,
+} from "@/lib/rlc";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 import { downloadCsv } from "@/lib/csv";
 import styles from "./ChartToolbar.module.css";
@@ -42,9 +48,13 @@ interface Props {
   f0: number;
   yMin?: number;
   yMax?: number;
+  L: number;
+  C: number;
+  circuitType: CircuitType;
+  sweepParams: SweepParams;
 }
 
-export default function RComparisonChart({ freqs, curves, f0, yMin, yMax }: Props) {
+export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, circuitType, sweepParams }: Props) {
   const chartRef = useRef<ChartJS<"line">>(null);
   // Both metrics shown on the board by default; unchecking one leaves only
   // the other visible -- these are independent, not a single either/or
@@ -53,15 +63,21 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax }: Prop
   const [showAdmittance, setShowAdmittance] = useState(true);
 
   function handleDownloadCsv() {
+    // Full requested resolution, independent of whatever the chart itself
+    // downsampled to for smooth rendering -- a request for 100,000 points
+    // should produce a 100,001-row CSV, not the ~2,000-row chart version.
+    const exportFreqs = buildExportFrequencies(f0, sweepParams);
+    const rList = curves.map((c) => c.R);
+    const exportCurves = buildRComparisonCurves(exportFreqs, rList, L, C, circuitType);
     const headers = [
       "Point",
       "Frequency_Hz",
-      ...curves.flatMap((c) => [`Impedance_R=${c.R.toPrecision(3)}_Ohm`, `Admittance_R=${c.R.toPrecision(3)}_Siemens`]),
+      ...exportCurves.flatMap((c) => [`Impedance_R=${c.R.toPrecision(3)}_Ohm`, `Admittance_R=${c.R.toPrecision(3)}_Siemens`]),
     ];
-    const rows = freqs.map((f, i) => [
+    const rows = exportFreqs.map((f, i) => [
       i + 1,
       f,
-      ...curves.flatMap((c) => [c.impedance[i], c.admittance[i]]),
+      ...exportCurves.flatMap((c) => [c.impedance[i], c.admittance[i]]),
     ]);
     downloadCsv("rlc_impedance_admittance_sweep.csv", headers, rows);
   }

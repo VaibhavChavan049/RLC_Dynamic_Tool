@@ -147,10 +147,20 @@ export interface SweepParams {
   // Points=500 -> delta = (1,000,000 - 10) / 500).
 }
 
-// Keeps charts smooth and the browser responsive. Asking for millions of
-// points would freeze the chart, so requests beyond this get evenly
-// resampled across the same start/finish range instead.
+// Keeps CHARTS smooth and the browser responsive -- this cap only limits
+// what gets drawn on screen. Asking for millions of points on the chart
+// itself would freeze it, so requests beyond this get evenly resampled
+// across the same start/finish range for RENDERING purposes.
 const MAX_SWEEP_POINTS = 2000;
+
+// CSV export has no rendering-smoothness constraint (a browser can build
+// and download a 100,000+ row text file without trouble), so it gets a
+// much higher, independent cap -- a request for exactly 100,000 points
+// should produce a CSV with exactly 100,001 rows (start through finish
+// inclusive), not the same 2,000-row chart resampling. This ceiling exists
+// only to guard against truly extreme input (e.g. typing a billion) that
+// would otherwise hang the tab while building the export array.
+const MAX_EXPORT_POINTS = 500_000;
 
 export interface FrequencySweep {
   freqs: number[];
@@ -169,6 +179,33 @@ function autoSweep(f0: number): number[] {
     freqs[i] = Math.pow(10, logStart + t * (logStop - logStart));
   }
   return freqs;
+}
+
+/** Shared by buildFrequencySweep (chart cap) and buildExportFrequencies
+ * (CSV cap) -- same start/finish/numPoints math, different point ceiling. */
+function generateManualFreqs(
+  start: number,
+  finish: number,
+  numPoints: number,
+  maxPoints: number
+): { freqs: number[]; delta: number; downsampled: boolean } {
+  const delta = (finish - start) / numPoints;
+  const sampleCount = numPoints + 1; // numPoints steps -> numPoints+1 samples, start through finish
+
+  if (sampleCount <= maxPoints) {
+    const freqs: number[] = new Array(sampleCount);
+    for (let i = 0; i < sampleCount; i++) freqs[i] = start + i * delta;
+    return { freqs, delta, downsampled: false };
+  }
+
+  // Too many points requested for this ceiling -- keep the requested
+  // start/finish range, but resample evenly to maxPoints.
+  const freqs: number[] = new Array(maxPoints);
+  for (let i = 0; i < maxPoints; i++) {
+    const t = i / (maxPoints - 1);
+    freqs[i] = start + t * (finish - start);
+  }
+  return { freqs, delta, downsampled: true };
 }
 
 /**
@@ -192,26 +229,28 @@ export function buildFrequencySweep(f0: number, params: SweepParams): FrequencyS
       return { freqs: autoSweep(f0), delta: 0, downsampled: false, invalidParams: true };
     }
 
-    const delta = (finish - start) / numPoints;
-    const sampleCount = numPoints + 1; // numPoints steps -> numPoints+1 samples, start through finish
-
-    if (sampleCount <= MAX_SWEEP_POINTS) {
-      const freqs: number[] = new Array(sampleCount);
-      for (let i = 0; i < sampleCount; i++) freqs[i] = start + i * delta;
-      return { freqs, delta, downsampled: false, invalidParams: false };
-    }
-
-    // Too many points requested to render smoothly -- keep the requested
-    // start/finish range, but resample evenly to MAX_SWEEP_POINTS.
-    const freqs: number[] = new Array(MAX_SWEEP_POINTS);
-    for (let i = 0; i < MAX_SWEEP_POINTS; i++) {
-      const t = i / (MAX_SWEEP_POINTS - 1);
-      freqs[i] = start + t * (finish - start);
-    }
-    return { freqs, delta, downsampled: true, invalidParams: false };
+    const { freqs, delta, downsampled } = generateManualFreqs(start, finish, numPoints, MAX_SWEEP_POINTS);
+    return { freqs, delta, downsampled, invalidParams: false };
   }
 
   return { freqs: autoSweep(f0), delta: 0, downsampled: false, invalidParams: false };
+}
+
+/**
+ * Full-resolution frequencies for CSV export -- independent of whatever the
+ * chart itself downsampled to. "auto" mode has no user-requested count (it's
+ * always the same 200 log-spaced points), so it matches the chart exactly;
+ * "manual" mode regenerates at up to MAX_EXPORT_POINTS instead of the much
+ * lower chart-rendering cap.
+ */
+export function buildExportFrequencies(f0: number, params: SweepParams): number[] {
+  if (params.mode === "manual") {
+    const { start, finish, numPoints } = params;
+    const validParams = start > 0 && finish > start && Number.isFinite(numPoints) && numPoints >= 1;
+    if (!validParams) return autoSweep(f0);
+    return generateManualFreqs(start, finish, numPoints, MAX_EXPORT_POINTS).freqs;
+  }
+  return autoSweep(f0);
 }
 
 export interface ReactancePoints {

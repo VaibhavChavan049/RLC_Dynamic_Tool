@@ -512,6 +512,9 @@ export default function Home() {
                     reactance={reactance}
                     f0={f0}
                     logY={logY}
+                    L={L}
+                    C={C}
+                    sweepParams={{ mode: chart1XMode, start: chart1Start, finish: chart1Finish, numPoints: chart1NumPoints }}
                     {...effectiveYRange(chart1YMode, chart1YMin, chart1YMax)}
                   />
                 </div>

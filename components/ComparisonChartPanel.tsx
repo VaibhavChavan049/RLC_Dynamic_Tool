@@ -126,7 +126,16 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
           {rList.length === 0 ? (
             <p className={styles.presetNote}>Add at least one R value above to see a curve.</p>
           ) : (
-            <RComparisonChart freqs={sweep.freqs} curves={curves} f0={f0} {...effectiveYRange(yMode, yMin, yMax)} />
+            <RComparisonChart
+              freqs={sweep.freqs}
+              curves={curves}
+              f0={f0}
+              L={L}
+              C={C}
+              circuitType={circuitType}
+              sweepParams={{ mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }}
+              {...effectiveYRange(yMode, yMin, yMax)}
+            />
           )}
 
           <QualityFactorChart curves={curves} />

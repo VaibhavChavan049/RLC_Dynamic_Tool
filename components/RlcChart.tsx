@@ -14,7 +14,7 @@ import {
 import annotationPlugin from "chartjs-plugin-annotation";
 import zoomPlugin from "chartjs-plugin-zoom";
 import { Line } from "react-chartjs-2";
-import type { ReactancePoints } from "@/lib/rlc";
+import { buildExportFrequencies, reactanceAtFreqs, type ReactancePoints, type SweepParams } from "@/lib/rlc";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 import { downloadCsv } from "@/lib/csv";
 import styles from "./ChartToolbar.module.css";
@@ -46,14 +46,22 @@ interface Props {
   logY?: boolean;
   yMin?: number;
   yMax?: number;
+  L: number;
+  C: number;
+  sweepParams: SweepParams;
 }
 
-export default function RlcChart({ reactance, f0, logY = false, yMin, yMax }: Props) {
+export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C, sweepParams }: Props) {
   const { freqs, xc, xl } = reactance;
   const chartRef = useRef<ChartJS<"line">>(null);
 
   function handleDownloadCsv() {
-    const rows = freqs.map((f, i) => [i + 1, f, xc[i], xl[i]]);
+    // Full requested resolution, independent of whatever the chart itself
+    // downsampled to for smooth rendering -- a request for 100,000 points
+    // should produce a 100,001-row CSV, not the ~2,000-row chart version.
+    const exportFreqs = buildExportFrequencies(f0, sweepParams);
+    const exportReactance = reactanceAtFreqs(exportFreqs, L, C);
+    const rows = exportFreqs.map((f, i) => [i + 1, f, exportReactance.xc[i], exportReactance.xl[i]]);
     downloadCsv("rlc_xc_xl_sweep.csv", ["Point", "Frequency_Hz", "Xc_Ohm", "XL_Ohm"], rows);
   }
 

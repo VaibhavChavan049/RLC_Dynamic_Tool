@@ -110,7 +110,8 @@ export default function AxisControls({
             )}
             {downsampled && (
               <p className={styles.note}>
-                That many points is too much to render smoothly -- resampled to {pointCount.toLocaleString()} points.
+                That many points is too much to render smoothly -- the chart is resampled to{" "}
+                {pointCount.toLocaleString()} points, but Download CSV still exports the full requested resolution.
               </p>
             )}
           </>
