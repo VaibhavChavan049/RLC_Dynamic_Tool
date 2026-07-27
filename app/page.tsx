@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 import {
@@ -15,7 +15,6 @@ import {
   resonantFreq,
   buildFrequencySweep,
   reactanceAtFreqs,
-  buildRComparisonCurves,
   type SweepMode,
   type CircuitType,
 } from "@/lib/rlc";
@@ -23,10 +22,80 @@ import {
 // Chart.js touches the DOM/canvas, so it must only run in the browser.
 // Load it client-side only and skip server-side rendering for it.
 const RlcChart = dynamic(() => import("@/components/RlcChart"), { ssr: false });
-const RComparisonChart = dynamic(() => import("@/components/RComparisonChart"), { ssr: false });
 const AxisControls = dynamic(() => import("@/components/AxisControls"), { ssr: false });
+const ComparisonChartPanel = dynamic(() => import("@/components/ComparisonChartPanel"), { ssr: false });
 
 type Mode = "manual" | "preset";
+
+interface HistorySnapshot {
+  id: string;
+  savedAt: string;
+  lValue: number;
+  lUnit: string;
+  cValue: number;
+  cUnit: string;
+  rValue: number;
+  rUnit: string;
+  circuitType: CircuitType;
+}
+
+const HISTORY_STORAGE_KEY = "rlc_history";
+
+function loadHistoryFromStorage(): HistorySnapshot[] {
+  try {
+    const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as HistorySnapshot[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistoryToStorage(list: HistorySnapshot[]) {
+  try {
+    window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    // Storage full or unavailable (e.g. private browsing) -- history just
+    // won't persist across reloads, not worth surfacing as an error.
+  }
+}
+
+// A tiny external store for the history list, read via useSyncExternalStore
+// (same pattern PasswordGate.tsx uses for sessionStorage) -- this avoids the
+// "empty on server, populated on client" hydration mismatch that a plain
+// useState+useEffect would cause, since localStorage doesn't exist during
+// server-side rendering.
+let historyCache: HistorySnapshot[] | null = null;
+let historyListeners: (() => void)[] = [];
+
+function getHistorySnapshot(): HistorySnapshot[] {
+  if (historyCache === null) historyCache = loadHistoryFromStorage();
+  return historyCache;
+}
+
+function getServerHistorySnapshot(): HistorySnapshot[] {
+  return [];
+}
+
+function subscribeHistory(callback: () => void) {
+  historyListeners.push(callback);
+  return () => {
+    historyListeners = historyListeners.filter((l) => l !== callback);
+  };
+}
+
+function setHistoryStore(next: HistorySnapshot[]) {
+  historyCache = next;
+  saveHistoryToStorage(next);
+  historyListeners.forEach((l) => l());
+}
+
+function formatSnapshotLabel(snap: HistorySnapshot): string {
+  const lUnitShort = snap.lUnit.split(" ")[0];
+  const cUnitShort = snap.cUnit.split(" ")[0];
+  const rUnitShort = snap.rUnit.split(" ")[0];
+  const circuit = snap.circuitType === "series" ? "Series" : "Parallel";
+  return `L=${snap.lValue}${lUnitShort}, C=${snap.cValue}${cUnitShort}, R=${snap.rValue}${rUnitShort} (${circuit})`;
+}
 
 // Resonant frequency result unit: display label -> multiplier applied to
 // the value in Hz (e.g. 1 kHz shown = f0 in Hz * 1e-3).
@@ -116,19 +185,57 @@ export default function Home() {
   const [chart1YMin, setChart1YMin] = useState(0.1);
   const [chart1YMax, setChart1YMax] = useState(1000);
 
-  const [chart2XMode, setChart2XMode] = useState<SweepMode>("auto");
-  const [chart2Start, setChart2Start] = useState(10);
-  const [chart2Finish, setChart2Finish] = useState(1_000_000);
-  const [chart2NumPoints, setChart2NumPoints] = useState(500);
-  const [chart2YMode, setChart2YMode] = useState<SweepMode>("auto");
-  const [chart2YMin, setChart2YMin] = useState(0.1);
-  const [chart2YMax, setChart2YMax] = useState(1000);
+  // Comparison charts (Impedance/Admittance/Quality Factor) -- "+ Add
+  // comparison chart" below creates more of these, each one an independent
+  // ComparisonChartPanel with its own R list, its own frequency sweep, and
+  // its own Y-range, entirely separate from the others.
+  const [chartIds, setChartIds] = useState<number[]>([0]);
+  const nextChartId = useRef(1);
 
-  // R values to compare on the Admittance/Impedance charts. Starts with just
-  // the current R; "+ Add" appends whatever R is entered above, so earlier
-  // curves are kept (held) while new ones are added on top -- e.g. add R=1 Ω,
-  // then change R to 5 Ω and add that too, and both curves stay visible.
-  const [comparisonRList, setComparisonRList] = useState<number[]>([1]);
+  function addComparisonChart() {
+    setChartIds((prev) => [...prev, nextChartId.current++]);
+  }
+
+  function removeComparisonChart(id: number) {
+    setChartIds((prev) => prev.filter((cid) => cid !== id));
+  }
+
+  // History: manual snapshots of the circuit values (L, C, R, circuit type)
+  // so earlier inputs can be reloaded later. Saved to localStorage (not
+  // just in-memory) so they survive a page refresh; read via
+  // useSyncExternalStore, same pattern as PasswordGate.tsx's sessionStorage
+  // read, so there's no "empty on server, populated on client" mismatch.
+  const history = useSyncExternalStore(subscribeHistory, getHistorySnapshot, getServerHistorySnapshot);
+
+  function saveToHistory() {
+    const snapshot: HistorySnapshot = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      savedAt: new Date().toISOString(),
+      lValue,
+      lUnit,
+      cValue,
+      cUnit,
+      rValue,
+      rUnit,
+      circuitType,
+    };
+    setHistoryStore([snapshot, ...history].slice(0, 50)); // cap so localStorage doesn't grow unbounded
+  }
+
+  function loadFromHistory(snap: HistorySnapshot) {
+    setMode("manual");
+    setLValue(snap.lValue);
+    setLUnit(snap.lUnit);
+    setCValue(snap.cValue);
+    setCUnit(snap.cUnit);
+    setRValue(snap.rValue);
+    setRUnit(snap.rUnit);
+    setCircuitType(snap.circuitType);
+  }
+
+  function removeFromHistory(id: string) {
+    setHistoryStore(history.filter((s) => s.id !== id));
+  }
 
   const { L, C, R, excelF0 } = useMemo(() => {
     if (mode === "preset") {
@@ -151,47 +258,12 @@ export default function Home() {
   );
   const reactance = useMemo(() => reactanceAtFreqs(chart1Sweep.freqs, L, C), [chart1Sweep, L, C]);
 
-  const chart2Sweep = useMemo(
-    () => buildFrequencySweep(f0, { mode: chart2XMode, start: chart2Start, finish: chart2Finish, numPoints: chart2NumPoints }),
-    [f0, chart2XMode, chart2Start, chart2Finish, chart2NumPoints]
-  );
-  const rCurves = useMemo(
-    () => buildRComparisonCurves(chart2Sweep.freqs, comparisonRList, L, C, circuitType),
-    [chart2Sweep, comparisonRList, L, C, circuitType]
-  );
   const Zo = useMemo(() => characteristicImpedance(L, C), [L, C]);
   const w0 = useMemo(() => angularResonantFreq(L, C), [L, C]);
   const Q = useMemo(
     () => (circuitType === "series" ? qualityFactor(R, L, C) : parallelQualityFactor(R, L, C)),
     [circuitType, R, L, C]
   );
-  const isRAlreadyAdded = useMemo(
-    () => comparisonRList.some((r) => Math.abs(r - R) < 1e-12),
-    [comparisonRList, R]
-  );
-
-  // Manual R entry for the comparison list -- lets you type a value to
-  // compare directly, without having to change the "Resistance R" field
-  // above first (which would also change every other metric on the page).
-  const [manualCompareR, setManualCompareR] = useState(5);
-  const isManualRAlreadyAdded = useMemo(
-    () => comparisonRList.some((r) => Math.abs(r - manualCompareR) < 1e-12),
-    [comparisonRList, manualCompareR]
-  );
-
-  function addRToComparison(value: number) {
-    setComparisonRList((prev) => {
-      // Skip if this R is already in the list (e.g. clicking "+ Add" again
-      // without changing the value first would otherwise add the exact
-      // same curve twice).
-      const alreadyAdded = prev.some((r) => Math.abs(r - value) < 1e-12);
-      return alreadyAdded || !(value > 0) ? prev : [...prev, value];
-    });
-  }
-
-  function removeComparisonR(index: number) {
-    setComparisonRList((prev) => prev.filter((_, i) => i !== index));
-  }
 
   return (
     <div className={styles.page}>
@@ -339,50 +411,31 @@ export default function Home() {
             )}
 
             <div className={styles.panelDivider} />
-            <div className={styles.panelTitle}>Compare R values</div>
+            <div className={styles.panelTitle}>History</div>
+            <button className={styles.addButton} onClick={saveToHistory}>
+              + Save current values to history
+            </button>
             <div className={styles.rList}>
-              {comparisonRList.map((rVal, i) => (
-                <div key={i} className={styles.rListRow}>
-                  <span>
-                    R = {rVal.toPrecision(3)} Ω (Q ={" "}
-                    {(circuitType === "series"
-                      ? qualityFactor(rVal, L, C)
-                      : parallelQualityFactor(rVal, L, C)
-                    ).toFixed(2)}
-                    )
-                  </span>
-                  <button className={styles.rListRemove} onClick={() => removeComparisonR(i)} aria-label="Remove">
+              {history.length === 0 && (
+                <p className={styles.presetNote}>
+                  No saved snapshots yet -- click above to save L/C/R and circuit type so you can reload them later.
+                </p>
+              )}
+              {history.map((snap) => (
+                <div key={snap.id} className={styles.rListRow}>
+                  <button className={styles.historyLoadButton} onClick={() => loadFromHistory(snap)}>
+                    <span>{formatSnapshotLabel(snap)}</span>
+                    <span className={styles.historyTimestamp}>{new Date(snap.savedAt).toLocaleString()}</span>
+                  </button>
+                  <button
+                    className={styles.rListRemove}
+                    onClick={() => removeFromHistory(snap.id)}
+                    aria-label="Remove from history"
+                  >
                     ×
                   </button>
                 </div>
               ))}
-            </div>
-            <button
-              className={styles.addButton}
-              onClick={() => addRToComparison(R)}
-              disabled={isRAlreadyAdded}
-            >
-              {isRAlreadyAdded
-                ? `R = ${R.toPrecision(3)} Ω already added -- change R above to add another`
-                : `+ Add current R (${R.toPrecision(3)} Ω) to comparison`}
-            </button>
-
-            <div className={styles.manualCompareRow}>
-              <input
-                className={styles.input}
-                type="number"
-                min={0}
-                value={manualCompareR}
-                onChange={(e) => setManualCompareR(Number(e.target.value))}
-                aria-label="Manual R value to compare (Ω)"
-              />
-              <button
-                className={styles.addButton}
-                onClick={() => addRToComparison(manualCompareR)}
-                disabled={isManualRAlreadyAdded || !(manualCompareR > 0)}
-              >
-                + Add R = {manualCompareR.toPrecision(3)} Ω (manual)
-              </button>
             </div>
           </div>
 
@@ -485,43 +538,22 @@ export default function Home() {
               </div>
             </div>
 
-            <div className={styles.chartPanel}>
-              <div className={styles.chartPanelTitle}>
-                {circuitType === "series"
-                  ? "Impedance |Z| dips to R at resonance, Admittance |Y| = 1/|Z| peaks there -- lower R means higher Q and a sharper curve"
-                  : "Impedance |Z| PEAKS to R at resonance, Admittance |Y| = 1/|Z| dips there -- higher R means higher Q and a sharper curve (opposite of series)"}
-              </div>
-              <div className={styles.chartPanelBody}>
-                <div className={styles.chartCanvasWrap}>
-                  <RComparisonChart
-                    freqs={chart2Sweep.freqs}
-                    curves={rCurves}
-                    f0={f0}
-                    {...effectiveYRange(chart2YMode, chart2YMin, chart2YMax)}
-                  />
-                </div>
-                <AxisControls
-                  xMode={chart2XMode}
-                  onXModeChange={setChart2XMode}
-                  xStart={chart2Start}
-                  onXStartChange={setChart2Start}
-                  xFinish={chart2Finish}
-                  onXFinishChange={setChart2Finish}
-                  xNumPoints={chart2NumPoints}
-                  onXNumPointsChange={setChart2NumPoints}
-                  computedDelta={chart2Sweep.delta}
-                  downsampled={chart2Sweep.downsampled}
-                  invalidParams={chart2Sweep.invalidParams}
-                  pointCount={chart2Sweep.freqs.length}
-                  yMode={chart2YMode}
-                  onYModeChange={setChart2YMode}
-                  yMin={chart2YMin}
-                  onYMinChange={setChart2YMin}
-                  yMax={chart2YMax}
-                  onYMaxChange={setChart2YMax}
-                />
-              </div>
-            </div>
+            {chartIds.map((id, idx) => (
+              <ComparisonChartPanel
+                key={id}
+                L={L}
+                C={C}
+                R={R}
+                circuitType={circuitType}
+                f0={f0}
+                index={idx}
+                onRemove={() => removeComparisonChart(id)}
+                canRemove={chartIds.length > 1}
+              />
+            ))}
+            <button className={styles.addButton} onClick={addComparisonChart}>
+              + Add comparison chart
+            </button>
           </div>
         </div>
       </div>

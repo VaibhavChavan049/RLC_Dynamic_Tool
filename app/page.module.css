@@ -392,3 +392,27 @@
 .manualCompareRow .addButton {
   flex: 1;
 }
+
+.historyLoadButton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.historyLoadButton:hover {
+  color: var(--accent);
+}
+
+.historyTimestamp {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
