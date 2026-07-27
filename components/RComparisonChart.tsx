@@ -59,6 +59,14 @@ interface Props {
 
 export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, circuitType, sweepParams }: Props) {
   const chartRef = useRef<ChartJS<"line">>(null);
+  // "Zoom to bandwidth" sets this explicitly (fed straight into the x-scale
+  // options below); "Reset zoom" clears it back to null so bounds: "data"
+  // auto-computes the full range again. Driving this through normal React
+  // state -- rather than chartjs-plugin-zoom's own zoomScale()/resetZoom()
+  // -- sidesteps that plugin's internal "original scale bounds" bookkeeping,
+  // which gets corrupted by a React re-render landing between the two calls
+  // and silently "resets" back to the zoomed range instead of the true one.
+  const [xZoomRange, setXZoomRange] = useState<{ min: number; max: number } | null>(null);
   // Both metrics shown on the board by default; unchecking one leaves only
   // the other visible -- these are independent, not a single either/or
   // toggle, so both can also be hidden if the user unchecks both.
@@ -194,6 +202,8 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
             lineWidth: logGridWidth,
           },
           ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
+          min: xZoomRange?.min,
+          max: xZoomRange?.max,
         },
         y: {
           type: "logarithmic",
@@ -229,17 +239,25 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         annotation: { annotations },
         // Scroll-wheel and pinch zoom, plus click-drag panning, on both axes.
         zoom: {
-          pan: { enabled: true, mode: "xy" },
+          pan: {
+            enabled: true,
+            mode: "xy",
+            // A manual pan after "Zoom to bandwidth" should stick -- clear
+            // our own React-driven range so the next unrelated re-render
+            // doesn't snap the x-axis back to the bandwidth-zoom range.
+            onPanComplete: () => setXZoomRange(null),
+          },
           zoom: {
             wheel: { enabled: true },
             pinch: { enabled: true },
             mode: "xy",
+            onZoomComplete: () => setXZoomRange(null),
           },
           limits: { x: { min: "original", max: "original" }, y: { min: "original", max: "original" } },
         },
       },
     }),
-    [yLabel, yMin, yMax, annotations]
+    [yLabel, yMin, yMax, annotations, xZoomRange]
   );
 
   function zoomIn() {
@@ -249,7 +267,40 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
     chartRef.current?.zoom(0.8);
   }
   function resetZoom() {
-    chartRef.current?.resetZoom();
+    if (xZoomRange) {
+      // "Zoom to bandwidth" is the active zoom -- clearing our own state is
+      // enough. Also calling chart.resetZoom() here would make
+      // chartjs-plugin-zoom re-derive its own "original scale bounds"
+      // bookkeeping from the CURRENT (still zoomed, at the moment this runs)
+      // scale, corrupting it into "resetting" right back to that zoomed
+      // range instead of the true original.
+      setXZoomRange(null);
+    } else {
+      // Otherwise a wheel/pinch/drag zoom is active, tracked entirely
+      // inside the plugin -- its own reset is what undoes that.
+      chartRef.current?.resetZoom();
+    }
+  }
+  function zoomToBandwidth() {
+    if (curves.length === 0) return;
+    // Fits the X-axis to the widest f1-f2 span across all curves, with 15%
+    // breathing room either side (in log terms) -- at the full auto/manual
+    // sweep range the bandwidth region is often a tiny sliver near the
+    // resonant line, easy to miss with several curves' f1/f2 lines bunched
+    // together; this snaps straight to the readable close-up view. Setting
+    // our own React state (rather than calling the zoom plugin's own
+    // zoomScale()) means the range flows through the normal options ->
+    // chart.update() path, the same reliable path every other option on
+    // this chart already uses.
+    let minF1 = Infinity;
+    let maxF2 = -Infinity;
+    curves.forEach((curve) => {
+      const { f1, f2 } = halfPowerFrequencies(f0, bandwidth(f0, curve.Q));
+      minF1 = Math.min(minF1, f1);
+      maxF2 = Math.max(maxF2, f2);
+    });
+    const pad = 1.15;
+    setXZoomRange({ min: minF1 / pad, max: maxF2 * pad });
   }
 
   return (
@@ -283,6 +334,9 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
       <div className={styles.toolbar}>
         <button type="button" onClick={zoomIn}>Zoom in</button>
         <button type="button" onClick={zoomOut}>Zoom out</button>
+        {showBandwidth && (
+          <button type="button" onClick={zoomToBandwidth}>Zoom to bandwidth</button>
+        )}
         <button type="button" onClick={resetZoom}>Reset zoom</button>
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
