@@ -96,6 +96,22 @@ export function bandwidth(f0: number, Q: number): number {
   return f0 / Q;
 }
 
+/**
+ * f1, f2: the two half-power (cutoff) frequencies that bound the bandwidth
+ * -- f2 - f1 = BW and f1*f2 = f0^2 (the textbook's fs = sqrt(f1*f2)), which
+ * together give this closed form regardless of topology:
+ *   f1 = (-BW + sqrt(BW^2 + 4*f0^2)) / 2,  f2 = f1 + BW
+ * For a SERIES tank this is algebraically identical to the textbook's
+ *   f1 = (1/2pi)[-R/2L + (1/2)*sqrt((R/L)^2 + 4/LC)]
+ *   f2 = (1/2pi)[+R/2L + (1/2)*sqrt((R/L)^2 + 4/LC)]
+ * (and the dual form for PARALLEL, swapping R/L for G/C) -- using f0/BW
+ * directly here avoids duplicating that derivation per topology.
+ */
+export function halfPowerFrequencies(f0: number, BW: number): { f1: number; f2: number } {
+  const f1 = (-BW + Math.sqrt(BW * BW + 4 * f0 * f0)) / 2;
+  return { f1, f2: f1 + BW };
+}
+
 /** |Z(f)| = sqrt(R^2 + (XL(f) - Xc(f))^2): series RLC impedance magnitude. */
 export function impedanceMagnitude(f: number, R: number, L: number, C: number): number {
   const xl = 2 * Math.PI * f * L;

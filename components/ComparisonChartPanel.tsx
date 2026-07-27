@@ -143,14 +143,17 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
               </div>
             ))}
           </div>
+          <label className={styles.manualCompareLabel} htmlFor={`manual-r-${index}`}>
+            Add another R value manually to compare
+          </label>
           <div className={styles.manualCompareRow}>
             <input
+              id={`manual-r-${index}`}
               className={styles.input}
               type="number"
               min={0}
               value={manualR}
               onChange={(e) => setManualR(Number(e.target.value))}
-              aria-label={`Manual R value to compare (chart ${index + 1})`}
             />
             <button
               className={styles.addButton}

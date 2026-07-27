@@ -379,6 +379,13 @@
   background: transparent;
 }
 
+.manualCompareLabel {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
 .manualCompareRow {
   display: flex;
   gap: 0.5rem;

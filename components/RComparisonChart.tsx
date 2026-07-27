@@ -17,10 +17,13 @@ import { Line } from "react-chartjs-2";
 import {
   buildExportFrequencies,
   buildRComparisonCurves,
+  bandwidth,
+  halfPowerFrequencies,
   type RComparisonCurve,
   type CircuitType,
   type SweepParams,
 } from "@/lib/rlc";
+import type { AnnotationOptions } from "chartjs-plugin-annotation";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 import { downloadCsv } from "@/lib/csv";
 import styles from "./ChartToolbar.module.css";
@@ -61,6 +64,10 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
   // toggle, so both can also be hidden if the user unchecks both.
   const [showImpedance, setShowImpedance] = useState(true);
   const [showAdmittance, setShowAdmittance] = useState(true);
+  // Marks each curve's half-power (bandwidth) frequencies f1/f2 -- the
+  // textbook shows these as the points where the curve crosses the
+  // half-power level, bounding the shaded bandwidth region under the peak.
+  const [showBandwidth, setShowBandwidth] = useState(true);
 
   function handleDownloadCsv() {
     // Full requested resolution, independent of whatever the chart itself
@@ -123,6 +130,46 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         ? "Admittance |Y| = 1/|Z| [S] (log scale)"
         : "Impedance |Z| [Ω] (log scale)";
 
+  // f1/f2 per curve, color-matched to that curve -- labeled only when a
+  // single curve is shown (multiple curves would otherwise stack "f1"/"f2"
+  // text on top of each other).
+  const annotations = useMemo(() => {
+    const anns: Record<string, AnnotationOptions> = {
+      resonantLine: {
+        type: "line",
+        xMin: f0,
+        xMax: f0,
+        borderColor: RESONANT_COLOR,
+        borderWidth: 1.5,
+        borderDash: [5, 4],
+      },
+    };
+    if (showBandwidth) {
+      curves.forEach((curve, i) => {
+        const color = CURVE_COLORS[i % CURVE_COLORS.length];
+        const BW = bandwidth(f0, curve.Q);
+        const { f1, f2 } = halfPowerFrequencies(f0, BW);
+        anns[`f1_${i}`] = {
+          type: "line",
+          xMin: f1,
+          xMax: f1,
+          borderColor: color,
+          borderWidth: 1,
+          borderDash: [2, 3],
+        };
+        anns[`f2_${i}`] = {
+          type: "line",
+          xMin: f2,
+          xMax: f2,
+          borderColor: color,
+          borderWidth: 1,
+          borderDash: [2, 3],
+        };
+      });
+    }
+    return anns;
+  }, [f0, curves, showBandwidth]);
+
   const options: ChartOptions<"line"> = useMemo(
     () => ({
       responsive: true,
@@ -179,18 +226,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
             },
           },
         },
-        annotation: {
-          annotations: {
-            resonantLine: {
-              type: "line",
-              xMin: f0,
-              xMax: f0,
-              borderColor: RESONANT_COLOR,
-              borderWidth: 1.5,
-              borderDash: [5, 4],
-            },
-          },
-        },
+        annotation: { annotations },
         // Scroll-wheel and pinch zoom, plus click-drag panning, on both axes.
         zoom: {
           pan: { enabled: true, mode: "xy" },
@@ -203,7 +239,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         },
       },
     }),
-    [f0, yLabel, yMin, yMax]
+    [yLabel, yMin, yMax, annotations]
   );
 
   function zoomIn() {
@@ -227,9 +263,19 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
           <input type="checkbox" checked={showAdmittance} onChange={(e) => setShowAdmittance(e.target.checked)} />
           Admittance |Y| = 1/|Z| (S)
         </label>
+        <label>
+          <input type="checkbox" checked={showBandwidth} onChange={(e) => setShowBandwidth(e.target.checked)} />
+          Bandwidth (f1/f2)
+        </label>
       </div>
       {!showImpedance && !showAdmittance && (
         <p className={styles.noteWarning}>Both metrics are hidden -- check at least one box above to see a curve.</p>
+      )}
+      {showBandwidth && (
+        <p className={styles.note}>
+          Thin dotted lines mark each curve&apos;s half-power frequencies f1 and f2 (same color as its curve) -- the
+          gap between them is that R&apos;s bandwidth.
+        </p>
       )}
       <div style={{ height: 420, width: "100%" }}>
         <Line ref={chartRef} data={data} options={options} />
