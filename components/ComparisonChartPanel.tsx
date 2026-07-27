@@ -8,6 +8,7 @@ import {
   buildRComparisonCurves,
   qualityFactor,
   parallelQualityFactor,
+  bandwidth,
   type SweepMode,
   type CircuitType,
 } from "@/lib/rlc";
@@ -183,26 +184,59 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
             </button>
           )}
         </div>
-        <AxisControls
-          xMode={xMode}
-          onXModeChange={setXMode}
-          xStart={xStart}
-          onXStartChange={setXStart}
-          xFinish={xFinish}
-          onXFinishChange={setXFinish}
-          xNumPoints={xNumPoints}
-          onXNumPointsChange={setXNumPoints}
-          computedDelta={sweep.delta}
-          downsampled={sweep.downsampled}
-          invalidParams={sweep.invalidParams}
-          pointCount={sweep.freqs.length}
-          yMode={yMode}
-          onYModeChange={setYMode}
-          yMin={yMin}
-          onYMinChange={setYMin}
-          yMax={yMax}
-          onYMaxChange={setYMax}
-        />
+        <div className={styles.rightColumn}>
+          <AxisControls
+            xMode={xMode}
+            onXModeChange={setXMode}
+            xStart={xStart}
+            onXStartChange={setXStart}
+            xFinish={xFinish}
+            onXFinishChange={setXFinish}
+            xNumPoints={xNumPoints}
+            onXNumPointsChange={setXNumPoints}
+            computedDelta={sweep.delta}
+            downsampled={sweep.downsampled}
+            invalidParams={sweep.invalidParams}
+            pointCount={sweep.freqs.length}
+            yMode={yMode}
+            onYModeChange={setYMode}
+            yMin={yMin}
+            onYMinChange={setYMin}
+            yMax={yMax}
+            onYMaxChange={setYMax}
+          />
+          <div className={styles.rqbwTable}>
+            <div className={styles.panelTitle}>R / Q / Bandwidth</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>R (Ω)</th>
+                  <th>Q</th>
+                  <th>BW (Hz)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayEntries.map((entry, i) => {
+                  const q =
+                    circuitType === "series"
+                      ? qualityFactor(entry.value, L, C)
+                      : parallelQualityFactor(entry.value, L, C);
+                  const bw = bandwidth(f0, q);
+                  return (
+                    <tr key={i}>
+                      <td>
+                        {entry.value.toPrecision(3)}
+                        {entry.pinnedIndex === null ? " (current)" : ""}
+                      </td>
+                      <td>{q.toFixed(2)}</td>
+                      <td>{bw.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
