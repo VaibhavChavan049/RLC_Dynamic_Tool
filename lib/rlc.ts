@@ -147,20 +147,16 @@ export interface SweepParams {
   // Points=500 -> delta = (1,000,000 - 10) / 500).
 }
 
-// Keeps CHARTS smooth and the browser responsive -- this cap only limits
-// what gets drawn on screen. Asking for millions of points on the chart
-// itself would freeze it, so requests beyond this get evenly resampled
-// across the same start/finish range for RENDERING purposes.
-const MAX_SWEEP_POINTS = 2000;
+// Effectively "unlimited" -- whatever Number of Points is typed gets
+// rendered exactly, matching CSV export 1-for-1. This ceiling only exists
+// to stop a truly extreme value (e.g. typing a billion) from hanging the
+// tab; it is not meant to be hit by any realistic request (100,000 or
+// even a few hundred thousand points render and export exactly as typed).
+const MAX_SWEEP_POINTS = 500_000;
 
-// CSV export has no rendering-smoothness constraint (a browser can build
-// and download a 100,000+ row text file without trouble), so it gets a
-// much higher, independent cap -- a request for exactly 100,000 points
-// should produce a CSV with exactly 100,001 rows (start through finish
-// inclusive), not the same 2,000-row chart resampling. This ceiling exists
-// only to guard against truly extreme input (e.g. typing a billion) that
-// would otherwise hang the tab while building the export array.
-const MAX_EXPORT_POINTS = 500_000;
+// CSV export shares the same ceiling as the chart now -- both always show
+// exactly what was requested.
+const MAX_EXPORT_POINTS = MAX_SWEEP_POINTS;
 
 export interface FrequencySweep {
   freqs: number[];

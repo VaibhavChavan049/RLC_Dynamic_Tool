@@ -14,8 +14,22 @@ function isPowerOfTen(value: number): boolean {
   return Math.abs(log - Math.round(log)) < 1e-9;
 }
 
+// How close (in decades) a value can be to a power of ten before its own
+// label would visually crowd/overlap that power-of-ten's label.
+const BOUNDARY_LABEL_CLEARANCE_DECADES = 0.15;
+
+function isNearPowerOfTen(value: number): boolean {
+  const log = Math.log10(value);
+  return Math.abs(log - Math.round(log)) < BOUNDARY_LABEL_CLEARANCE_DECADES;
+}
+
 /** Scale option: afterBuildTicks -- replaces the auto-generated ticks with
- * every 1x-9x value across each visible decade. */
+ * every 1x-9x value across each visible decade, PLUS the axis's exact
+ * min/max themselves (e.g. a manually-typed Start/Finish like 234,567
+ * won't land on a round 1x-9x grid value, so without this the boundary
+ * would have no gridline/label at all -- easy to mistake for the chart
+ * having silently clamped to the nearest round number instead of honoring
+ * what was actually typed). */
 export function buildLogGraphPaperTicks(scale: Scale): void {
   const min = scale.min as number;
   const max = scale.max as number;
@@ -33,14 +47,26 @@ export function buildLogGraphPaperTicks(scale: Scale): void {
       }
     }
   }
+  if (!ticks.some((t) => Math.abs(t.value - min) < min * 1e-9)) ticks.push({ value: min });
+  if (!ticks.some((t) => Math.abs(t.value - max) < max * 1e-9)) ticks.push({ value: max });
+  ticks.sort((a, b) => a.value - b.value);
   scale.ticks = ticks;
 }
 
-/** Ticks option: callback -- only label the major (power-of-10) ticks. */
-export function logMajorOnlyLabel(value: number | string): string {
+/** Ticks option: callback -- labels the major (power-of-10) ticks, plus
+ * the very first/last tick (the axis's actual boundary), so a
+ * manually-entered Start/Finish that isn't a round number still gets a
+ * visible confirmation label right at the edge of the chart -- unless that
+ * boundary sits so close to a power-of-ten that its label would just
+ * overlap the round number's label (e.g. an auto-scaled max of 12,566
+ * sitting right next to the 10,000 gridline), in which case the
+ * power-of-ten label alone is clearer. */
+export function logMajorOnlyLabel(value: number | string, index: number, ticks: { value: number }[]): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (!isPowerOfTen(num)) return "";
-  return num.toLocaleString();
+  if (isPowerOfTen(num)) return num.toLocaleString();
+  const isBoundary = index === 0 || index === ticks.length - 1;
+  if (isBoundary && !isNearPowerOfTen(num)) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return "";
 }
 
 /** Grid option: color -- bolder line on majors, faint line on minors. */
