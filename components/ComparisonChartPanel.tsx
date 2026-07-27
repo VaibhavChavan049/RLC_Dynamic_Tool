@@ -42,10 +42,23 @@ interface Props {
  * from the others, so different R sets can be explored side by side.
  */
 export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, onRemove, canRemove }: Props) {
-  // Seeded with the current R at the moment this panel was created --
-  // after that it's independent of the "Resistance R" field above.
-  const [rList, setRList] = useState<number[]>(() => [R]);
+  // pinnedRList holds only the EXTRA R values you've explicitly pinned for
+  // comparison -- the live "Resistance R" field above is never stored here.
+  // It's always shown as its own entry instead (see displayEntries below),
+  // so whatever you currently have set as R shows up immediately, with no
+  // stale snapshot from whenever this chart happened to be created.
+  const [pinnedRList, setPinnedRList] = useState<number[]>([]);
   const [manualR, setManualR] = useState(R);
+  // Keeps the manual-pin field's suggested starting value in sync with the
+  // live R above (it's just a starting point to tweak before pinning, not
+  // something the user is expected to have already typed into) -- adjusted
+  // during render rather than in an effect, per React's own guidance for
+  // "reset state when a prop changes" (react.dev/learn/you-might-not-need-an-effect).
+  const [prevR, setPrevR] = useState(R);
+  if (R !== prevR) {
+    setPrevR(R);
+    setManualR(R);
+  }
 
   const [xMode, setXMode] = useState<SweepMode>("auto");
   const [xStart, setXStart] = useState(10);
@@ -55,38 +68,45 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
   const [yMin, setYMin] = useState(0.1);
   const [yMax, setYMax] = useState(1000);
 
+  // The live current R always comes first; pinned values are appended
+  // after it, skipping any pinned value that happens to equal the live R
+  // right now (so it isn't shown twice).
+  const displayEntries = useMemo(() => {
+    const entries: { value: number; pinnedIndex: number | null }[] = [{ value: R, pinnedIndex: null }];
+    pinnedRList.forEach((r, i) => {
+      if (Math.abs(r - R) > 1e-12) entries.push({ value: r, pinnedIndex: i });
+    });
+    return entries;
+  }, [R, pinnedRList]);
+
   const sweep = useMemo(
     () => buildFrequencySweep(f0, { mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }),
     [f0, xMode, xStart, xFinish, xNumPoints]
   );
   const curves = useMemo(
-    () => buildRComparisonCurves(sweep.freqs, rList, L, C, circuitType),
-    [sweep, rList, L, C, circuitType]
+    () => buildRComparisonCurves(sweep.freqs, displayEntries.map((e) => e.value), L, C, circuitType),
+    [sweep, displayEntries, L, C, circuitType]
   );
 
+  // Checked against pinnedRList itself, NOT displayEntries -- pinning the
+  // value that currently equals live R is exactly the "lock this in before
+  // I change R" workflow (displayEntries just hides the redundant duplicate
+  // row for as long as they happen to coincide; the pin persists and
+  // reappears once R moves away from it).
   const isManualRAlreadyAdded = useMemo(
-    () => rList.some((r) => Math.abs(r - manualR) < 1e-12),
-    [rList, manualR]
+    () => pinnedRList.some((r) => Math.abs(r - manualR) < 1e-12),
+    [pinnedRList, manualR]
   );
 
-  // Tracks the LIVE "Resistance R" field above (unlike rList, which is only
-  // seeded from R once at creation) -- so if you change R after this chart
-  // already exists, one click adds that new current value instead of
-  // having to retype it into the manual field below.
-  const isCurrentRAlreadyAdded = useMemo(
-    () => rList.some((r) => Math.abs(r - R) < 1e-12),
-    [rList, R]
-  );
-
-  function addR(value: number) {
-    setRList((prev) => {
+  function pinR(value: number) {
+    setPinnedRList((prev) => {
       const alreadyAdded = prev.some((r) => Math.abs(r - value) < 1e-12);
       return alreadyAdded || !(value > 0) ? prev : [...prev, value];
     });
   }
 
-  function removeR(i: number) {
-    setRList((prev) => prev.filter((_, j) => j !== i));
+  function removePinnedR(i: number) {
+    setPinnedRList((prev) => prev.filter((_, j) => j !== i));
   }
 
   return (
@@ -101,24 +121,28 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
           </div>
 
           <div className={styles.rList}>
-            {rList.map((rVal, i) => (
+            {displayEntries.map((entry, i) => (
               <div key={i} className={styles.rListRow}>
                 <span>
-                  R = {rVal.toPrecision(3)} Ω (Q ={" "}
-                  {(circuitType === "series" ? qualityFactor(rVal, L, C) : parallelQualityFactor(rVal, L, C)).toFixed(2)}
-                  )
+                  R = {entry.value.toPrecision(3)} Ω (Q ={" "}
+                  {(circuitType === "series"
+                    ? qualityFactor(entry.value, L, C)
+                    : parallelQualityFactor(entry.value, L, C)
+                  ).toFixed(2)}
+                  ){entry.pinnedIndex === null && " -- current"}
                 </span>
-                <button className={styles.rListRemove} onClick={() => removeR(i)} aria-label="Remove">
-                  ×
-                </button>
+                {entry.pinnedIndex !== null && (
+                  <button
+                    className={styles.rListRemove}
+                    onClick={() => removePinnedR(entry.pinnedIndex as number)}
+                    aria-label="Remove"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             ))}
           </div>
-          <button className={styles.addButton} onClick={() => addR(R)} disabled={isCurrentRAlreadyAdded}>
-            {isCurrentRAlreadyAdded
-              ? `R = ${R.toPrecision(3)} Ω already added -- change R above to add another`
-              : `+ Add current R (${R.toPrecision(3)} Ω)`}
-          </button>
           <div className={styles.manualCompareRow}>
             <input
               className={styles.input}
@@ -130,27 +154,23 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
             />
             <button
               className={styles.addButton}
-              onClick={() => addR(manualR)}
+              onClick={() => pinR(manualR)}
               disabled={isManualRAlreadyAdded || !(manualR > 0)}
             >
-              + Add R = {manualR.toPrecision(3)} Ω
+              + Pin R = {manualR.toPrecision(3)} Ω for comparison
             </button>
           </div>
 
-          {rList.length === 0 ? (
-            <p className={styles.presetNote}>Add at least one R value above to see a curve.</p>
-          ) : (
-            <RComparisonChart
-              freqs={sweep.freqs}
-              curves={curves}
-              f0={f0}
-              L={L}
-              C={C}
-              circuitType={circuitType}
-              sweepParams={{ mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }}
-              {...effectiveYRange(yMode, yMin, yMax)}
-            />
-          )}
+          <RComparisonChart
+            freqs={sweep.freqs}
+            curves={curves}
+            f0={f0}
+            L={L}
+            C={C}
+            circuitType={circuitType}
+            sweepParams={{ mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }}
+            {...effectiveYRange(yMode, yMin, yMax)}
+          />
 
           <QualityFactorChart curves={curves} />
 
