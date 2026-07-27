@@ -170,13 +170,22 @@ export default function Home() {
     [comparisonRList, R]
   );
 
-  function addCurrentRToComparison() {
+  // Manual R entry for the comparison list -- lets you type a value to
+  // compare directly, without having to change the "Resistance R" field
+  // above first (which would also change every other metric on the page).
+  const [manualCompareR, setManualCompareR] = useState(5);
+  const isManualRAlreadyAdded = useMemo(
+    () => comparisonRList.some((r) => Math.abs(r - manualCompareR) < 1e-12),
+    [comparisonRList, manualCompareR]
+  );
+
+  function addRToComparison(value: number) {
     setComparisonRList((prev) => {
       // Skip if this R is already in the list (e.g. clicking "+ Add" again
-      // without changing the R field above would otherwise add the exact
+      // without changing the value first would otherwise add the exact
       // same curve twice).
-      const alreadyAdded = prev.some((r) => Math.abs(r - R) < 1e-12);
-      return alreadyAdded ? prev : [...prev, R];
+      const alreadyAdded = prev.some((r) => Math.abs(r - value) < 1e-12);
+      return alreadyAdded || !(value > 0) ? prev : [...prev, value];
     });
   }
 
@@ -348,11 +357,33 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <button className={styles.addButton} onClick={addCurrentRToComparison} disabled={isRAlreadyAdded}>
+            <button
+              className={styles.addButton}
+              onClick={() => addRToComparison(R)}
+              disabled={isRAlreadyAdded}
+            >
               {isRAlreadyAdded
                 ? `R = ${R.toPrecision(3)} Ω already added -- change R above to add another`
                 : `+ Add current R (${R.toPrecision(3)} Ω) to comparison`}
             </button>
+
+            <div className={styles.manualCompareRow}>
+              <input
+                className={styles.input}
+                type="number"
+                min={0}
+                value={manualCompareR}
+                onChange={(e) => setManualCompareR(Number(e.target.value))}
+                aria-label="Manual R value to compare (Ω)"
+              />
+              <button
+                className={styles.addButton}
+                onClick={() => addRToComparison(manualCompareR)}
+                disabled={isManualRAlreadyAdded || !(manualCompareR > 0)}
+              >
+                + Add R = {manualCompareR.toPrecision(3)} Ω (manual)
+              </button>
+            </div>
           </div>
 
           <div className={styles.main}>

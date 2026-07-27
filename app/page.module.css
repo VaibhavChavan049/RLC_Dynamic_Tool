@@ -378,3 +378,17 @@
 .addButton:disabled:hover {
   background: transparent;
 }
+
+.manualCompareRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.manualCompareRow .input {
+  flex: 0 0 90px;
+}
+
+.manualCompareRow .addButton {
+  flex: 1;
+}
