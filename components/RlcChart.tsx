@@ -66,6 +66,16 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
+  // Whenever isFullscreen flips, the container's height changes (see the
+  // inline style below), but Chart.js's own ResizeObserver doesn't reliably
+  // catch a size change driven by exiting the browser's native Fullscreen
+  // mode (as opposed to an actual window resize) -- the canvas was staying
+  // stuck at its old (fullscreen) pixel size, rendering oversized and
+  // cut off. Nudging it explicitly once the new layout has painted fixes it.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => chartRef.current?.resize());
+    return () => cancelAnimationFrame(raf);
+  }, [isFullscreen]);
   function toggleFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -226,7 +236,18 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
 
   return (
     <div ref={containerRef} className={styles.fullscreenWrap}>
-      <div style={{ height: isFullscreen ? "calc(100vh - 160px)" : 420, width: "100%" }}>
+      {isFullscreen && (
+        <button
+          type="button"
+          className={styles.fullscreenCloseBtn}
+          onClick={toggleFullscreen}
+          aria-label="Exit fullscreen"
+          title="Exit fullscreen"
+        >
+          ×
+        </button>
+      )}
+      <div style={{ height: isFullscreen ? "calc(100vh - 260px)" : 420, width: "100%" }}>
         <Line ref={chartRef} data={data} options={options} />
       </div>
       <div className={styles.toolbar}>

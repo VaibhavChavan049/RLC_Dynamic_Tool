@@ -56,3 +56,31 @@
   padding: 1.5rem 2rem;
   overflow-y: auto;
 }
+
+/* Only rendered (in JS) while actually in fullscreen -- a clearly visible
+   close control in the corner, same convention as a video player's
+   fullscreen exit button, instead of having to find the toolbar's text
+   button at the bottom of a now much-taller chart. */
+.fullscreenCloseBtn {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.fullscreenCloseBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
