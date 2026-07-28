@@ -55,9 +55,9 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
   const { freqs, xc, xl } = reactance;
   const chartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartWrapRef = useRef<HTMLDivElement>(null);
   // Native Fullscreen API rather than a CSS overlay -- the browser handles
-  // Escape-to-exit for free, and Chart.js's responsive:true already
-  // resizes the canvas to fit whatever size the container becomes.
+  // Escape-to-exit for free.
   const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => {
     function handleFullscreenChange() {
@@ -66,16 +66,30 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
-  // Whenever isFullscreen flips, the container's height changes (see the
-  // inline style below), but Chart.js's own ResizeObserver doesn't reliably
-  // catch a size change driven by exiting the browser's native Fullscreen
-  // mode (as opposed to an actual window resize) -- the canvas was staying
-  // stuck at its old (fullscreen) pixel size, rendering oversized and
-  // cut off. Nudging it explicitly once the new layout has painted fixes it.
+  // Chart.js's own responsive:true resize doesn't reliably catch a size
+  // change driven by exiting the browser's native Fullscreen mode -- a
+  // fixed-delay nudge (the previous approach here) raced the exit
+  // transition: it fired before the container had actually shrunk back
+  // down, so Chart.js measured the still-fullscreen (viewport-wide) size
+  // and baked that width into the canvas, which then overflowed the whole
+  // page layout even after the surrounding div was back to 420px. Watching
+  // the wrap div's REAL measured size via ResizeObserver and resizing only
+  // once it actually changes sidesteps the race entirely.
   useEffect(() => {
-    const raf = requestAnimationFrame(() => chartRef.current?.resize());
-    return () => cancelAnimationFrame(raf);
-  }, [isFullscreen]);
+    const el = chartWrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      // Passing the exact measured size (rather than calling resize()
+      // with no arguments, which asks Chart.js to auto-detect it again
+      // itself) bypasses whatever internal comparison/caching was
+      // returning a stale, still-fullscreen-sized answer.
+      chartRef.current?.resize(rect.width, rect.height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   function toggleFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -247,7 +261,7 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
           ×
         </button>
       )}
-      <div style={{ height: isFullscreen ? "calc(100vh - 260px)" : 420, width: "100%" }}>
+      <div ref={chartWrapRef} style={{ height: isFullscreen ? "calc(100vh - 260px)" : 420, width: "100%" }}>
         <Line ref={chartRef} data={data} options={options} />
       </div>
       <div className={styles.toolbar}>

@@ -184,6 +184,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  /* Grid items default to min-width: auto (content-based), so a wide
+     descendant (e.g. a Chart.js canvas whose intrinsic width briefly grows
+     while a chart is in fullscreen) can force this whole grid column --
+     and the page's max-width container along with it -- to stay stretched
+     even after the chart itself shrinks back down. min-width: 0 lets this
+     column shrink to fit its track regardless of any descendant's content
+     size. */
+  min-width: 0;
 }
 
 .metrics {
@@ -253,6 +261,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.25rem;
+  min-width: 0;
 }
 
 .chartPanelTitle {
@@ -265,6 +274,7 @@
   display: flex;
   gap: 1.25rem;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .chartCanvasWrap {
