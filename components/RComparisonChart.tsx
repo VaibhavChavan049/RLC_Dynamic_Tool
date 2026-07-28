@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Chart as ChartJS,
   LogarithmicScale,
@@ -59,6 +59,25 @@ interface Props {
 
 export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, circuitType, sweepParams }: Props) {
   const chartRef = useRef<ChartJS<"line">>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Native Fullscreen API rather than a CSS overlay -- the browser handles
+  // Escape-to-exit for free, and Chart.js's responsive:true already
+  // resizes the canvas to fit whatever size the container becomes.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      containerRef.current?.requestFullscreen();
+    }
+  }
   // "Zoom to bandwidth" sets this explicitly (fed straight into the x-scale
   // options below); "Reset zoom" clears it back to null so bounds: "data"
   // auto-computes the full range again. Driving this through normal React
@@ -304,7 +323,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
   }
 
   return (
-    <div>
+    <div ref={containerRef} className={styles.fullscreenWrap}>
       <div className={styles.metricToggleRow}>
         <label>
           <input type="checkbox" checked={showImpedance} onChange={(e) => setShowImpedance(e.target.checked)} />
@@ -328,7 +347,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
           gap between them is that R&apos;s bandwidth.
         </p>
       )}
-      <div style={{ height: 420, width: "100%" }}>
+      <div style={{ height: isFullscreen ? "calc(100vh - 220px)" : 420, width: "100%" }}>
         <Line ref={chartRef} data={data} options={options} />
       </div>
       <div className={styles.toolbar}>
@@ -338,6 +357,9 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
           <button type="button" onClick={zoomToBandwidth}>Zoom to bandwidth</button>
         )}
         <button type="button" onClick={resetZoom}>Reset zoom</button>
+        <button type="button" onClick={toggleFullscreen}>
+          {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+        </button>
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
     </div>

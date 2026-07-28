@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Chart as ChartJS,
   LogarithmicScale,
@@ -54,6 +54,25 @@ interface Props {
 export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C, sweepParams }: Props) {
   const { freqs, xc, xl } = reactance;
   const chartRef = useRef<ChartJS<"line">>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Native Fullscreen API rather than a CSS overlay -- the browser handles
+  // Escape-to-exit for free, and Chart.js's responsive:true already
+  // resizes the canvas to fit whatever size the container becomes.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      containerRef.current?.requestFullscreen();
+    }
+  }
 
   function handleDownloadCsv() {
     // Full requested resolution, independent of whatever the chart itself
@@ -206,14 +225,17 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
   }
 
   return (
-    <div>
-      <div style={{ height: 420, width: "100%" }}>
+    <div ref={containerRef} className={styles.fullscreenWrap}>
+      <div style={{ height: isFullscreen ? "calc(100vh - 160px)" : 420, width: "100%" }}>
         <Line ref={chartRef} data={data} options={options} />
       </div>
       <div className={styles.toolbar}>
         <button type="button" onClick={zoomIn}>Zoom in</button>
         <button type="button" onClick={zoomOut}>Zoom out</button>
         <button type="button" onClick={resetZoom}>Reset zoom</button>
+        <button type="button" onClick={toggleFullscreen}>
+          {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+        </button>
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
     </div>

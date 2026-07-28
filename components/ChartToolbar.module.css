@@ -48,3 +48,11 @@
   line-height: 1.35;
   margin-bottom: 0.5rem;
 }
+
+/* :fullscreen only applies while this exact element is the browser's
+   fullscreen target (via requestFullscreen()) -- normal layout otherwise. */
+.fullscreenWrap:fullscreen {
+  background: var(--background);
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+}
