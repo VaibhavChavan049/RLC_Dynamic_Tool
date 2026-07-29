@@ -20,6 +20,13 @@
   color: var(--accent);
 }
 
+.chartTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 0.6rem;
+}
+
 .metricToggleRow {
   display: flex;
   flex-wrap: wrap;

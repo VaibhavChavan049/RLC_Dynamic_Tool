@@ -103,6 +103,7 @@ export default function QualityFactorChart({ curves, f0 }: Props) {
 
   return (
     <div>
+      <div className={styles.chartTitle}>Quality Factor, R, and Bandwidth Comparison</div>
       <div className={styles.metricToggleRow}>
         <span>Compare by:</span>
         <label>

@@ -422,7 +422,7 @@ export default function Home() {
             <div className={styles.rList}>
               {history.length === 0 && (
                 <p className={styles.presetNote}>
-                  No saved snapshots yet -- click above to save L/C/R and circuit type so you can reload them later.
+                  No saved snapshots yet. Click above to save L/C/R and circuit type so you can reload them later.
                 </p>
               )}
               {history.map((snap) => (
@@ -510,6 +510,7 @@ export default function Home() {
             </div>
 
             <div className={styles.chartPanel}>
+              <div className={styles.chartTitle}>Xc and XL Reactance vs Frequency</div>
               <label className={styles.checkboxRow}>
                 <input type="checkbox" checked={logY} onChange={(e) => setLogY(e.target.checked)} />
                 Log scale Y-axis (Impedance)

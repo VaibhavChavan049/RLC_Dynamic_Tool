@@ -176,7 +176,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
 
   const yLabel =
     showImpedance && showAdmittance
-      ? "Impedance [Ω] (solid) / Admittance [S] (dashed) -- log scale"
+      ? "Impedance [Ω] (solid) / Admittance [S] (dashed), log scale"
       : showAdmittance
         ? "Admittance |Y| = 1/|Z| [S] (log scale)"
         : "Impedance |Z| [Ω] (log scale)";
@@ -374,12 +374,12 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         </label>
       </div>
       {!showImpedance && !showAdmittance && (
-        <p className={styles.noteWarning}>Both metrics are hidden -- check at least one box above to see a curve.</p>
+        <p className={styles.noteWarning}>Both metrics are hidden. Check at least one box above to see a curve.</p>
       )}
       {showBandwidth && (
         <p className={styles.note}>
-          Thin dotted lines mark each curve&apos;s half-power frequencies f1 and f2 (same color as its curve) -- the
-          gap between them is that R&apos;s bandwidth.
+          Thin dotted lines mark each curve&apos;s half-power frequencies f1 and f2 (same color as its curve). The gap
+          between them is that R&apos;s bandwidth.
         </p>
       )}
       <div ref={chartWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>

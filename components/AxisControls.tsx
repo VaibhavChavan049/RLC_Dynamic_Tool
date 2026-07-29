@@ -99,7 +99,7 @@ export default function AxisControls({
             </label>
             {invalidParams && (
               <p className={styles.noteWarning}>
-                Finish must be greater than Start, and Number of points must be at least 1 -- showing the auto sweep
+                Finish must be greater than Start, and Number of points must be at least 1. Showing the auto sweep
                 until fixed.
               </p>
             )}
@@ -110,7 +110,7 @@ export default function AxisControls({
             )}
             {downsampled && (
               <p className={styles.note}>
-                That&apos;s an extreme number of points -- resampled to {pointCount.toLocaleString()} (applies to
+                That&apos;s an extreme number of points. Resampled to {pointCount.toLocaleString()} (applies to
                 both the chart and its CSV download) to keep the browser responsive.
               </p>
             )}
@@ -149,7 +149,7 @@ export default function AxisControls({
               />
             </label>
             {yMin >= yMax && (
-              <p className={styles.noteWarning}>Max must be greater than Min -- showing auto range until fixed.</p>
+              <p className={styles.noteWarning}>Max must be greater than Min. Showing auto range until fixed.</p>
             )}
           </>
         )}

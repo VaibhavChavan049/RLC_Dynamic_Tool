@@ -264,6 +264,13 @@
   min-width: 0;
 }
 
+.chartTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 0.3rem;
+}
+
 .chartPanelTitle {
   font-size: 0.85rem;
   color: var(--muted);

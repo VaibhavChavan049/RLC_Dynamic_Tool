@@ -114,11 +114,11 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
     <div className={styles.chartPanel}>
       <div className={styles.chartPanelBody} style={{ alignItems: "stretch" }}>
         <div className={styles.chartCanvasWrap}>
+          <div className={styles.chartTitle}>Comparison Chart #{index + 1}: Impedance and Admittance vs Frequency</div>
           <div className={styles.chartPanelTitle}>
-            Comparison chart #{index + 1} --{" "}
             {circuitType === "series"
-              ? "Impedance |Z| dips to R at resonance, Admittance |Y| = 1/|Z| peaks there"
-              : "Impedance |Z| PEAKS to R at resonance, Admittance |Y| = 1/|Z| dips there"}
+              ? "Impedance |Z| dips to R at resonance. Admittance |Y| = 1/|Z| peaks there."
+              : "Impedance |Z| PEAKS to R at resonance. Admittance |Y| = 1/|Z| dips there."}
           </div>
 
           <div className={styles.rList}>
@@ -130,7 +130,7 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
                     ? qualityFactor(entry.value, L, C)
                     : parallelQualityFactor(entry.value, L, C)
                   ).toFixed(2)}
-                  ){entry.pinnedIndex === null && " -- current"}
+                  ){entry.pinnedIndex === null && " (current)"}
                 </span>
                 {entry.pinnedIndex !== null && (
                   <button
