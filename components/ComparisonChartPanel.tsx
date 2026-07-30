@@ -26,6 +26,7 @@ function effectiveYRange(mode: SweepMode, min: number, max: number): { yMin?: nu
 }
 
 interface Props {
+  V: number;
   L: number;
   C: number;
   R: number;
@@ -42,7 +43,7 @@ interface Props {
  * comparison chart" in page.tsx creates more of these, each fully separate
  * from the others, so different R sets can be explored side by side.
  */
-export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, onRemove, canRemove }: Props) {
+export default function ComparisonChartPanel({ V, L, C, R, circuitType, f0, index, onRemove, canRemove }: Props) {
   // pinnedRList holds only the EXTRA R values you've explicitly pinned for
   // comparison -- the live "Resistance R" field above is never stored here.
   // It's always shown as its own entry instead (see displayEntries below),
@@ -169,6 +170,7 @@ export default function ComparisonChartPanel({ L, C, R, circuitType, f0, index, 
             freqs={sweep.freqs}
             curves={curves}
             f0={f0}
+            V={V}
             L={L}
             C={C}
             circuitType={circuitType}

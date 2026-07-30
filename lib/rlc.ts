@@ -112,6 +112,16 @@ export function halfPowerFrequencies(f0: number, BW: number): { f1: number; f2: 
   return { f1, f2: f1 + BW };
 }
 
+/**
+ * Imax = V / R: the peak current magnitude, reached at resonance where
+ * |Z| = R for BOTH topologies (series dips to R, parallel peaks to R --
+ * either way the two reactances cancel and only R is left). 0.707 * Imax
+ * is the standard half-power current level shown alongside it.
+ */
+export function maxCurrent(V: number, R: number): number {
+  return V / R;
+}
+
 /** |Z(f)| = sqrt(R^2 + (XL(f) - Xc(f))^2): series RLC impedance magnitude. */
 export function impedanceMagnitude(f: number, R: number, L: number, C: number): number {
   const xl = 2 * Math.PI * f * L;

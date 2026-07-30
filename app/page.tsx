@@ -162,6 +162,7 @@ export default function Home() {
   // property of L and C alone, true for both topologies.
   const [circuitType, setCircuitType] = useState<CircuitType>("series");
 
+  const [vValue, setVValue] = useState(10);
   const [lValue, setLValue] = useState(1);
   const [lUnit, setLUnit] = useState("mH (millihenry)");
   const [cValue, setCValue] = useState(10);
@@ -324,6 +325,18 @@ export default function Home() {
 
             {mode === "manual" ? (
               <>
+                <div className={styles.field}>
+                  <label htmlFor="v-value">Supply Voltage V</label>
+                  <input
+                    id="v-value"
+                    className={styles.input}
+                    type="number"
+                    value={vValue}
+                    min={0}
+                    onChange={(e) => setVValue(Number(e.target.value))}
+                  />
+                </div>
+
                 <div className={styles.field}>
                   <label htmlFor="l-value">Inductance L</label>
                   <div className={styles.valueUnitRow}>
@@ -553,6 +566,7 @@ export default function Home() {
             {chartIds.map((id, idx) => (
               <ComparisonChartPanel
                 key={id}
+                V={vValue}
                 L={L}
                 C={C}
                 R={R}
