@@ -248,6 +248,9 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
       curves.forEach((curve, i) => {
         const color = CURVE_COLORS[i % CURVE_COLORS.length];
         const imax = maxCurrent(V, curve.R);
+        // Labeled directly on the chart (position "start" = left edge, like
+        // the textbook's Imax/0.707*Imax labels sitting beside the y-axis in
+        // Fig. 17.8), not just left as an unlabeled reference line.
         anns[`imax_${i}`] = {
           type: "line",
           yMin: imax,
@@ -255,6 +258,16 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
           borderColor: color,
           borderWidth: 1,
           borderDash: [5, 3],
+          label: {
+            display: true,
+            content: `Imax = ${imax.toPrecision(4)} A`,
+            position: "start",
+            xAdjust: 4,
+            yAdjust: -10,
+            color,
+            backgroundColor: "transparent",
+            font: { size: 10 },
+          },
         };
         anns[`halfPowerCurrent_${i}`] = {
           type: "line",
@@ -263,6 +276,19 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
           borderColor: color,
           borderWidth: 1,
           borderDash: [1, 2],
+          label: {
+            display: true,
+            content: `0.707 × Imax = ${(imax * 0.707).toPrecision(4)} A`,
+            position: "start",
+            xAdjust: 4,
+            // Below its own line (Imax's label sits above its line), so the
+            // two labels move apart from each other instead of colliding in
+            // the narrow gap between the Imax and 0.707*Imax lines.
+            yAdjust: 12,
+            color,
+            backgroundColor: "transparent",
+            font: { size: 10 },
+          },
         };
       });
     }
@@ -436,8 +462,9 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
       )}
       {showCurrent && (
         <p className={styles.note}>
-          Dashed lines mark each curve&apos;s peak current Imax = V / R (top line) and its 0.707 × Imax half-power
-          level (lower line), same color as its curve.
+          <strong>Imax = V / R</strong> is the peak current, reached at resonance (where |Z| = R). <strong>0.707 ×
+          Imax</strong> is the half-power current level. Both are labeled directly on the chart, color-matched to
+          each curve.
         </p>
       )}
       <div ref={chartWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>
