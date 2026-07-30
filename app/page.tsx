@@ -128,6 +128,8 @@ const SERIES_FORMULAS: [string, string][] = [
   ["Bandwidth BW", "BW = R / (2π·L) = f0 / Q"],
   ["Impedance magnitude |Z|", "|Z| = √(R² + (XL − Xc)²)"],
   ["Admittance magnitude |Y|", "|Y| = 1 / |Z|"],
+  ["Current magnitude |I|", "|I| = V / |Z| = V · |Y|"],
+  ["Peak current Imax", "Imax = V / R (at resonance, |Z| = R)"],
 ];
 
 const PARALLEL_FORMULAS: [string, string][] = [
@@ -143,6 +145,8 @@ const PARALLEL_FORMULAS: [string, string][] = [
   ["Bandwidth BW", "BW = 1 / (2π·R·C) = f0 / Q"],
   ["Admittance magnitude |Y|", "|Y| = √(G² + (Bc − Bl)²)"],
   ["Impedance magnitude |Z|", "|Z| = 1 / |Y|"],
+  ["Current magnitude |I|", "|I| = V / |Z| = V · |Y|"],
+  ["Peak current Imax", "Imax = V / R (at resonance, |Z| = R)"],
 ];
 
 // A Chart.js axis with min >= max renders a corrupted chart rather than an
