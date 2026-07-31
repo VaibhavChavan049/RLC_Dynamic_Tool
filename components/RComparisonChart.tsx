@@ -19,7 +19,6 @@ import {
   buildRComparisonCurves,
   bandwidth,
   halfPowerFrequencies,
-  maxCurrent,
   type RComparisonCurve,
   type CircuitType,
   type SweepParams,
@@ -45,13 +44,11 @@ const AXIS_TEXT_COLOR = "#8a8f98";
 // shown together on one board (they're reciprocals: |Y| = 1/|Z|).
 const IMPEDANCE_DASH: number[] = [];
 const ADMITTANCE_DASH = [6, 4];
-const CURRENT_DASH = [2, 2];
 
 interface Props {
   freqs: number[];
   curves: RComparisonCurve[];
   f0: number;
-  V: number;
   yMin?: number;
   yMax?: number;
   L: number;
@@ -60,7 +57,7 @@ interface Props {
   sweepParams: SweepParams;
 }
 
-export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, C, circuitType, sweepParams }: Props) {
+export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, circuitType, sweepParams }: Props) {
   const chartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
@@ -122,11 +119,6 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
   // textbook shows these as the points where the curve crosses the
   // half-power level, bounding the shaded bandwidth region under the peak.
   const [showBandwidth, setShowBandwidth] = useState(true);
-  // Current I = V * |Y| (Ohm's law through the reciprocal of impedance) --
-  // its own dotted curve per R, plus the Imax/0.707*Imax reference lines
-  // from the textbook's selectivity-curve figure (Imax = V/R, reached at
-  // resonance since |Z| = R there for both topologies).
-  const [showCurrent, setShowCurrent] = useState(true);
 
   function handleDownloadCsv() {
     // Full requested resolution, independent of whatever the chart itself
@@ -138,16 +130,12 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
     const headers = [
       "Point",
       "Frequency_Hz",
-      ...exportCurves.flatMap((c) => [
-        `Impedance_R=${c.R.toPrecision(3)}_Ohm`,
-        `Admittance_R=${c.R.toPrecision(3)}_Siemens`,
-        `Current_R=${c.R.toPrecision(3)}_Amp`,
-      ]),
+      ...exportCurves.flatMap((c) => [`Impedance_R=${c.R.toPrecision(3)}_Ohm`, `Admittance_R=${c.R.toPrecision(3)}_Siemens`]),
     ];
     const rows = exportFreqs.map((f, i) => [
       i + 1,
       f,
-      ...exportCurves.flatMap((c) => [c.impedance[i], c.admittance[i], V * c.admittance[i]]),
+      ...exportCurves.flatMap((c) => [c.impedance[i], c.admittance[i]]),
     ]);
     downloadCsv("rlc_impedance_admittance_sweep.csv", headers, rows);
   }
@@ -182,30 +170,16 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
           tension: 0,
         });
       }
-      if (showCurrent) {
-        datasets.push({
-          label: `I: R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
-          data: freqs.map((f, j) => ({ x: f, y: V * curve.admittance[j] })),
-          borderColor: color,
-          backgroundColor: color,
-          borderDash: CURRENT_DASH,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0,
-        });
-      }
     });
     return { datasets };
-  }, [freqs, curves, showImpedance, showAdmittance, showCurrent, V]);
+  }, [freqs, curves, showImpedance, showAdmittance]);
 
-  const yLabel = (() => {
-    const parts: string[] = [];
-    if (showImpedance) parts.push("Impedance [Ω] (solid)");
-    if (showAdmittance) parts.push("Admittance [S] (dashed)");
-    if (showCurrent) parts.push("Current [A] (dotted)");
-    return parts.length > 0 ? `${parts.join(" / ")}, log scale` : "log scale";
-  })();
+  const yLabel =
+    showImpedance && showAdmittance
+      ? "Impedance [Ω] (solid) / Admittance [S] (dashed), log scale"
+      : showAdmittance
+        ? "Admittance |Y| = 1/|Z| [S] (log scale)"
+        : "Impedance |Z| [Ω] (log scale)";
 
   // f1/f2 per curve, color-matched to that curve -- labeled only when a
   // single curve is shown (multiple curves would otherwise stack "f1"/"f2"
@@ -244,56 +218,8 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
         };
       });
     }
-    if (showCurrent) {
-      curves.forEach((curve, i) => {
-        const color = CURVE_COLORS[i % CURVE_COLORS.length];
-        const imax = maxCurrent(V, curve.R);
-        // Labeled directly on the chart (position "start" = left edge, like
-        // the textbook's Imax/0.707*Imax labels sitting beside the y-axis in
-        // Fig. 17.8), not just left as an unlabeled reference line.
-        anns[`imax_${i}`] = {
-          type: "line",
-          yMin: imax,
-          yMax: imax,
-          borderColor: color,
-          borderWidth: 1,
-          borderDash: [5, 3],
-          label: {
-            display: true,
-            content: `Imax = ${imax.toPrecision(4)} A`,
-            position: "start",
-            xAdjust: 4,
-            yAdjust: -10,
-            color,
-            backgroundColor: "transparent",
-            font: { size: 10 },
-          },
-        };
-        anns[`halfPowerCurrent_${i}`] = {
-          type: "line",
-          yMin: imax * 0.707,
-          yMax: imax * 0.707,
-          borderColor: color,
-          borderWidth: 1,
-          borderDash: [1, 2],
-          label: {
-            display: true,
-            content: `0.707 × Imax = ${(imax * 0.707).toPrecision(4)} A`,
-            position: "start",
-            xAdjust: 4,
-            // Below its own line (Imax's label sits above its line), so the
-            // two labels move apart from each other instead of colliding in
-            // the narrow gap between the Imax and 0.707*Imax lines.
-            yAdjust: 12,
-            color,
-            backgroundColor: "transparent",
-            font: { size: 10 },
-          },
-        };
-      });
-    }
     return anns;
-  }, [f0, curves, showBandwidth, showCurrent, V]);
+  }, [f0, curves, showBandwidth]);
 
   const options: ChartOptions<"line"> = useMemo(
     () => ({
@@ -345,11 +271,11 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
             label: (ctx) => {
-              const label = ctx.dataset.label ?? "";
+              const isAdmittance = ctx.dataset.label?.startsWith("Y:");
               const value = ctx.parsed.y as number;
-              if (label.startsWith("Y:")) return `${label}: ${value.toExponential(3)} S`;
-              if (label.startsWith("I:")) return `${label}: ${value.toExponential(3)} A`;
-              return `${label}: ${value.toExponential(3)} Ω`;
+              return isAdmittance
+                ? `${ctx.dataset.label}: ${value.toExponential(3)} S`
+                : `${ctx.dataset.label}: ${value.toExponential(3)} Ω`;
             },
           },
         },
@@ -446,25 +372,14 @@ export default function RComparisonChart({ freqs, curves, f0, V, yMin, yMax, L, 
           <input type="checkbox" checked={showBandwidth} onChange={(e) => setShowBandwidth(e.target.checked)} />
           Bandwidth (f1/f2)
         </label>
-        <label>
-          <input type="checkbox" checked={showCurrent} onChange={(e) => setShowCurrent(e.target.checked)} />
-          Current I = V·|Y| (A)
-        </label>
       </div>
-      {!showImpedance && !showAdmittance && !showCurrent && (
-        <p className={styles.noteWarning}>All metrics are hidden. Check at least one box above to see a curve.</p>
+      {!showImpedance && !showAdmittance && (
+        <p className={styles.noteWarning}>Both metrics are hidden. Check at least one box above to see a curve.</p>
       )}
       {showBandwidth && (
         <p className={styles.note}>
           Thin dotted lines mark each curve&apos;s half-power frequencies f1 and f2 (same color as its curve). The gap
           between them is that R&apos;s bandwidth.
-        </p>
-      )}
-      {showCurrent && (
-        <p className={styles.note}>
-          <strong>Imax = V / R</strong> is the peak current, reached at resonance (where |Z| = R). <strong>0.707 ×
-          Imax</strong> is the half-power current level. Both are labeled directly on the chart, color-matched to
-          each curve.
         </p>
       )}
       <div ref={chartWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>

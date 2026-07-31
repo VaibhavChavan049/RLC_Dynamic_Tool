@@ -16,6 +16,7 @@ import {
 const RComparisonChart = dynamic(() => import("@/components/RComparisonChart"), { ssr: false });
 const AxisControls = dynamic(() => import("@/components/AxisControls"), { ssr: false });
 const QualityFactorChart = dynamic(() => import("@/components/QualityFactorChart"), { ssr: false });
+const CurrentComparisonChart = dynamic(() => import("@/components/CurrentComparisonChart"), { ssr: false });
 
 // A Chart.js axis with min >= max renders a corrupted chart rather than an
 // error, so an invalid manual Y-range must never reach the chart -- fall
@@ -170,13 +171,14 @@ export default function ComparisonChartPanel({ V, L, C, R, circuitType, f0, inde
             freqs={sweep.freqs}
             curves={curves}
             f0={f0}
-            V={V}
             L={L}
             C={C}
             circuitType={circuitType}
             sweepParams={{ mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }}
             {...effectiveYRange(yMode, yMin, yMax)}
           />
+
+          <CurrentComparisonChart curves={curves} f0={f0} V={V} L={L} C={C} circuitType={circuitType} />
 
           <QualityFactorChart curves={curves} f0={f0} />
 
