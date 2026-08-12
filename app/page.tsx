@@ -286,7 +286,15 @@ export default function Home() {
             <div className={styles.tagline}>DRF Engineering Services, LLC. Champions of Power</div>
           </div>
           <h1>{circuitType === "series" ? "Series" : "Parallel"} RLC Tank: Resonant Frequency Calculator</h1>
-          <p>Enter L, C, R in any unit and see the Xc/XL crossing chart update instantly.</p>
+          <p>
+            This interactive RLC Calculator makes it easy to analyze series and parallel resonant circuits by
+            turning your component values into detailed performance graphs. Enter your inductor (L) and capacitor
+            (C) to establish the resonant frequency (f0), dial in your resistor (R) to control bandwidth, and add
+            voltage (V) to calculate power and current draw. The tool dynamically plots reactance (XL vs. XC),
+            impedance (|Z|), admittance (|Y|), and current selectivity curves so you can visualize how Q-factor and
+            bandwidth change. Whether you&apos;re building wireless charging pads or audio filters, aim for
+            operational frequencies above 20 kHz to keep component whine out of the audible range.
+          </p>
           <div className={styles.circuitTypeRow}>
             <span className={styles.circuitTypeLabel}>Circuit type</span>
             <div className={styles.modeToggle}>
