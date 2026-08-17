@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
-import styles from "./page.module.css";
+import styles from "@/app/page.module.css";
 import {
   L_UNITS,
   C_UNITS,

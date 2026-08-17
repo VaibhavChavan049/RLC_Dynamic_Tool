@@ -2,11 +2,10 @@
 
 import { useRef, useState, useSyncExternalStore } from "react";
 
-// Change this to set a new password. Casual gate only, not real security --
-// anyone reading the JS bundle can find this value, and that's fine for a
-// demo/pitch link where the goal is just "don't show a random visitor the app".
-const CORRECT_PASSWORD = "drf2024";
-
+// Casual gate only, not real security -- the real password check happens
+// server-side in app/api/check-password/route.ts against a value stored in
+// Edge Config, which app/admin/page.tsx can rotate without a code change or
+// redeploy. This component never sees the correct value.
 const STORAGE_KEY = "rlc_unlocked";
 
 // useSyncExternalStore is the React-recommended way to read a value that
@@ -32,14 +31,29 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
   const unlocked = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
+  const [checking, setChecking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function tryUnlock() {
-    if (password === CORRECT_PASSWORD) {
-      sessionStorage.setItem(STORAGE_KEY, "true");
-      window.location.reload();
-    } else {
+  async function tryUnlock() {
+    if (!password || checking) return;
+    setChecking(true);
+    try {
+      const res = await fetch("/api/check-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        sessionStorage.setItem(STORAGE_KEY, "true");
+        window.location.reload();
+      } else {
+        setError(true);
+      }
+    } catch {
       setError(true);
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -65,8 +79,8 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
             style={styles.input}
           />
           {error && <div style={styles.error}>Incorrect password, try again.</div>}
-          <button onClick={tryUnlock} style={styles.button}>
-            Enter
+          <button onClick={tryUnlock} style={styles.button} disabled={checking}>
+            {checking ? "Checking..." : "Enter"}
           </button>
         </div>
       </div>
@@ -76,11 +90,16 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
   return <>{children}</>;
 }
 
+// Uses the same --background/--foreground/etc. CSS variables (globals.css)
+// as the rest of the app, instead of hardcoded dark-navy hex values -- the
+// hardcoded colors used to render this gate as a dark box regardless of the
+// app's own (light, DRF-branded) theme, which looked like a broken/foreign
+// block when embedded in the company site's white page.
 const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "#0b0f16",
+    background: "var(--background)",
     zIndex: 9999,
   },
   card: {
@@ -97,13 +116,13 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "center",
   },
   title: {
-    color: "#ffffff",
+    color: "var(--foreground)",
     fontSize: "1.1rem",
     fontWeight: 700,
     letterSpacing: "0.02em",
   },
   subtitle: {
-    color: "#9aa3b5",
+    color: "var(--muted)",
     fontSize: "0.85rem",
     marginBottom: "0.5rem",
   },
@@ -111,15 +130,15 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     padding: "0.65rem 0.8rem",
     borderRadius: 8,
-    border: "1px solid #223047",
-    background: "#131a24",
-    color: "#ededee",
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
+    color: "var(--foreground)",
     fontSize: "0.95rem",
     outline: "none",
     boxSizing: "border-box",
   },
   error: {
-    color: "#f87171",
+    color: "#e5484d",
     fontSize: "0.8rem",
   },
   button: {
@@ -128,7 +147,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "0.65rem 0.8rem",
     borderRadius: 8,
     border: "none",
-    background: "#1863dc",
+    background: "var(--accent)",
     color: "#ffffff",
     fontSize: "0.95rem",
     fontWeight: 600,
