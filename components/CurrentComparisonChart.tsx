@@ -12,6 +12,7 @@ import {
   type ChartDataset,
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
+import zoomPlugin from "chartjs-plugin-zoom";
 import { Line } from "react-chartjs-2";
 import {
   buildRComparisonCurves,
@@ -27,7 +28,7 @@ import type { AnnotationOptions } from "chartjs-plugin-annotation";
 import { downloadCsv } from "@/lib/csv";
 import styles from "./ChartToolbar.module.css";
 
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin);
+ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin, zoomPlugin);
 
 const CURVE_COLORS = ["#1863dc", "#e5484d", "#2f9e58", "#f5a623", "#8b5cf6", "#00aeef"];
 const RESONANT_COLOR = "#8a8f98";
@@ -84,6 +85,10 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
       containerRef.current?.requestFullscreen();
     }
   }
+  // See RComparisonChart.tsx for why "Zoom to bandwidth" drives this
+  // through normal React state rather than the zoom plugin's own
+  // zoomScale()/resetZoom() -- same "original bounds" corruption risk.
+  const [xZoomRange, setXZoomRange] = useState<{ min: number; max: number } | null>(null);
 
   const rList = useMemo(() => curves.map((c) => c.R), [curves]);
 
@@ -203,6 +208,8 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
           title: { display: true, text: "Frequency f [Hz]", color: AXIS_TEXT_COLOR },
           grid: { color: GRID_COLOR },
           ticks: { color: AXIS_TEXT_COLOR },
+          min: xZoomRange?.min,
+          max: xZoomRange?.max,
         },
         y: {
           type: "linear",
@@ -225,10 +232,42 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
           },
         },
         annotation: { annotations },
+        zoom: {
+          pan: { enabled: true, mode: "xy", onPanComplete: () => setXZoomRange(null) },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "xy", onZoomComplete: () => setXZoomRange(null) },
+          limits: { x: { min: "original", max: "original" }, y: { min: "original", max: "original" } },
+        },
       },
     }),
-    [yTop, annotations]
+    [yTop, annotations, xZoomRange]
   );
+
+  function zoomIn() {
+    chartRef.current?.zoom(1.2);
+  }
+  function zoomOut() {
+    chartRef.current?.zoom(0.8);
+  }
+  function resetZoom() {
+    if (xZoomRange) {
+      setXZoomRange(null);
+    } else {
+      chartRef.current?.resetZoom();
+    }
+  }
+  function zoomToBandwidth() {
+    if (rList.length === 0) return;
+    let minF1 = Infinity;
+    let maxF2 = -Infinity;
+    rList.forEach((R) => {
+      const Q = circuitType === "series" ? qualityFactor(R, L, C) : parallelQualityFactor(R, L, C);
+      const { f1, f2 } = halfPowerFrequencies(f0, bandwidth(f0, Q));
+      minF1 = Math.min(minF1, f1);
+      maxF2 = Math.max(maxF2, f2);
+    });
+    const pad = 1.15;
+    setXZoomRange({ min: minF1 / pad, max: maxF2 * pad });
+  }
 
   function handleDownloadCsv() {
     const headers = ["Point", "Frequency_Hz", ...linCurves.flatMap((c) => [`Current_R=${c.R.toPrecision(3)}_Amp`])];
@@ -259,6 +298,10 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
         <Line ref={chartRef} data={data} options={options} />
       </div>
       <div className={styles.toolbar}>
+        <button type="button" onClick={zoomIn}>Zoom in</button>
+        <button type="button" onClick={zoomOut}>Zoom out</button>
+        <button type="button" onClick={zoomToBandwidth}>Zoom to bandwidth</button>
+        <button type="button" onClick={resetZoom}>Reset zoom</button>
         <button type="button" onClick={toggleFullscreen}>
           {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
         </button>
