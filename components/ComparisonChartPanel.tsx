@@ -166,17 +166,6 @@ export default function ComparisonChartPanel({ V, L, C, R, circuitType, f0, inde
               + Pin R = {manualR.toPrecision(3)} Ω for comparison
             </button>
           </div>
-
-          <RComparisonChart
-            freqs={sweep.freqs}
-            curves={curves}
-            f0={f0}
-            L={L}
-            C={C}
-            circuitType={circuitType}
-            sweepParams={{ mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }}
-            {...effectiveYRange(yMode, yMin, yMax)}
-          />
         </div>
         <div className={styles.rightColumn}>
           <AxisControls
@@ -232,6 +221,17 @@ export default function ComparisonChartPanel({ V, L, C, R, circuitType, f0, inde
           </div>
         </div>
       </div>
+
+      <RComparisonChart
+        freqs={sweep.freqs}
+        curves={curves}
+        f0={f0}
+        L={L}
+        C={C}
+        circuitType={circuitType}
+        sweepParams={{ mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }}
+        {...effectiveYRange(yMode, yMin, yMax)}
+      />
 
       <CurrentComparisonChart curves={curves} f0={f0} V={V} L={L} C={C} circuitType={circuitType} />
 
