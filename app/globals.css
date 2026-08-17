@@ -13,6 +13,13 @@
   --accent-cyan: #00aeef;
 }
 
+/* No dark-mode auto-switch: this app is embedded on DRF's own site (which
+   is light-only, no dark mode), so following a visitor's OS/browser
+   preference would make the embedded tool suddenly look like a mismatched
+   dark box on that light page -- it always renders in the DRF brand
+   palette above regardless of system preference. The data-theme="dark"
+   hook stays available for a future manual toggle if one's ever added, but
+   nothing sets it today. */
 :root[data-theme="dark"] {
   --background: #0b0f16;
   --foreground: #ededee;
@@ -23,20 +30,6 @@
   --accent-strong: #7fb3ff;
   --accent-soft: #16233d;
   --accent-cyan: #33c3f0;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --background: #0b0f16;
-    --foreground: #ededee;
-    --surface: #131a24;
-    --border: #223047;
-    --muted: #9aa3b5;
-    --accent: #4a8cf0;
-    --accent-strong: #7fb3ff;
-    --accent-soft: #16233d;
-    --accent-cyan: #33c3f0;
-  }
 }
 
 html {
