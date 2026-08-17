@@ -23,7 +23,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const url = new URL(`https://api.vercel.com/v1/edge-config/${edgeConfigId}/items`);
+  // Vercel's write API for this lives under /v1/global-config/ now (the
+  // product was renamed from "Edge Config" to "Global Config" -- reads via
+  // @vercel/edge-config in check-password/route.ts still work unchanged,
+  // but this REST endpoint moved and /v1/edge-config/ 404s).
+  const url = new URL(`https://api.vercel.com/v1/global-config/${edgeConfigId}/items`);
   if (teamId) url.searchParams.set("teamId", teamId);
 
   const res = await fetch(url, {
