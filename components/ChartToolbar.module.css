@@ -56,6 +56,31 @@
   margin-bottom: 0.5rem;
 }
 
+.splitRow {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.splitCol {
+  flex: 1;
+  min-width: 0;
+}
+
+.splitColTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .splitRow {
+    flex-direction: column;
+  }
+}
+
 /* :fullscreen only applies while this exact element is the browser's
    fullscreen target (via requestFullscreen()) -- normal layout otherwise. */
 .fullscreenWrap:fullscreen {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   Chart as ChartJS,
   LogarithmicScale,
@@ -39,12 +39,6 @@ const MAJOR_GRID_COLOR = "rgba(128, 128, 128, 0.4)";
 const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
-// Impedance is drawn solid, Admittance dashed -- same color per R value, so
-// the two curve families stay visually distinguishable even when both are
-// shown together on one board (they're reciprocals: |Y| = 1/|Z|).
-const IMPEDANCE_DASH: number[] = [];
-const ADMITTANCE_DASH = [6, 4];
-
 interface Props {
   freqs: number[];
   curves: RComparisonCurve[];
@@ -57,10 +51,30 @@ interface Props {
   sweepParams: SweepParams;
 }
 
+// Keeps a Chart.js canvas in sync with its wrapper div's real measured size
+// (see the long ResizeObserver-vs-fixed-delay note this used to carry --
+// still applies). Impedance and Admittance are now two separate canvases
+// side by side, so each needs its own observer instance.
+function useChartResize(wrapRef: RefObject<HTMLDivElement | null>, chartRef: RefObject<ChartJS<"line"> | null>) {
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      chartRef.current?.resize(rect.width, rect.height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [wrapRef, chartRef]);
+}
+
 export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, circuitType, sweepParams }: Props) {
-  const chartRef = useRef<ChartJS<"line">>(null);
+  const zChartRef = useRef<ChartJS<"line">>(null);
+  const yChartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartWrapRef = useRef<HTMLDivElement>(null);
+  const zWrapRef = useRef<HTMLDivElement>(null);
+  const yWrapRef = useRef<HTMLDivElement>(null);
   // Native Fullscreen API rather than a CSS overlay -- the browser handles
   // Escape-to-exit for free.
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -71,30 +85,8 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
-  // Chart.js's own responsive:true resize doesn't reliably catch a size
-  // change driven by exiting the browser's native Fullscreen mode -- a
-  // fixed-delay nudge (the previous approach here) raced the exit
-  // transition: it fired before the container had actually shrunk back
-  // down, so Chart.js measured the still-fullscreen (viewport-wide) size
-  // and baked that width into the canvas, which then overflowed the whole
-  // page layout even after the surrounding div was back to 420px. Watching
-  // the wrap div's REAL measured size via ResizeObserver and resizing only
-  // once it actually changes sidesteps the race entirely.
-  useEffect(() => {
-    const el = chartWrapRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect;
-      if (!rect) return;
-      // Passing the exact measured size (rather than calling resize()
-      // with no arguments, which asks Chart.js to auto-detect it again
-      // itself) bypasses whatever internal comparison/caching was
-      // returning a stale, still-fullscreen-sized answer.
-      chartRef.current?.resize(rect.width, rect.height);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  useChartResize(zWrapRef, zChartRef);
+  useChartResize(yWrapRef, yChartRef);
   function toggleFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -102,17 +94,18 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
       containerRef.current?.requestFullscreen();
     }
   }
-  // "Zoom to bandwidth" sets this explicitly (fed straight into the x-scale
-  // options below); "Reset zoom" clears it back to null so bounds: "data"
-  // auto-computes the full range again. Driving this through normal React
-  // state -- rather than chartjs-plugin-zoom's own zoomScale()/resetZoom()
-  // -- sidesteps that plugin's internal "original scale bounds" bookkeeping,
-  // which gets corrupted by a React re-render landing between the two calls
-  // and silently "resets" back to the zoomed range instead of the true one.
+  // "Zoom to bandwidth" sets this explicitly (fed straight into both charts'
+  // x-scale options below); "Reset zoom" clears it back to null so
+  // bounds: "data" auto-computes the full range again. Driving this through
+  // normal React state -- rather than chartjs-plugin-zoom's own
+  // zoomScale()/resetZoom() -- sidesteps that plugin's internal "original
+  // scale bounds" bookkeeping, which gets corrupted by a React re-render
+  // landing between the two calls and silently "resets" back to the zoomed
+  // range instead of the true one.
   const [xZoomRange, setXZoomRange] = useState<{ min: number; max: number } | null>(null);
-  // Both metrics shown on the board by default; unchecking one leaves only
-  // the other visible -- these are independent, not a single either/or
-  // toggle, so both can also be hidden if the user unchecks both.
+  // Both charts shown side by side by default; unchecking one hides that
+  // column entirely (the other then takes the full row) -- independent
+  // toggles, not a single either/or, so both can also be hidden at once.
   const [showImpedance, setShowImpedance] = useState(true);
   const [showAdmittance, setShowAdmittance] = useState(true);
   // Marks each curve's half-power (bandwidth) frequencies f1/f2 -- the
@@ -140,50 +133,37 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
     downloadCsv("rlc_impedance_admittance_sweep.csv", headers, rows);
   }
 
-  const data = useMemo(() => {
-    const datasets: ChartDataset<"line", { x: number; y: number }[]>[] = [];
-    curves.forEach((curve, i) => {
-      const color = CURVE_COLORS[i % CURVE_COLORS.length];
-      if (showImpedance) {
-        datasets.push({
-          label: `Z: R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
-          data: freqs.map((f, j) => ({ x: f, y: curve.impedance[j] })),
-          borderColor: color,
-          backgroundColor: color,
-          borderDash: IMPEDANCE_DASH,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0,
-        });
-      }
-      if (showAdmittance) {
-        datasets.push({
-          label: `Y: R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
-          data: freqs.map((f, j) => ({ x: f, y: curve.admittance[j] })),
-          borderColor: color,
-          backgroundColor: color,
-          borderDash: ADMITTANCE_DASH,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0,
-        });
-      }
-    });
+  const zData = useMemo(() => {
+    const datasets: ChartDataset<"line", { x: number; y: number }[]>[] = curves.map((curve, i) => ({
+      label: `R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
+      data: freqs.map((f, j) => ({ x: f, y: curve.impedance[j] })),
+      borderColor: CURVE_COLORS[i % CURVE_COLORS.length],
+      backgroundColor: CURVE_COLORS[i % CURVE_COLORS.length],
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      tension: 0,
+    }));
     return { datasets };
-  }, [freqs, curves, showImpedance, showAdmittance]);
+  }, [freqs, curves]);
 
-  const yLabel =
-    showImpedance && showAdmittance
-      ? "Impedance [Ω] (solid) / Admittance [S] (dashed), log scale"
-      : showAdmittance
-        ? "Admittance |Y| = 1/|Z| [S] (log scale)"
-        : "Impedance |Z| [Ω] (log scale)";
+  const yData = useMemo(() => {
+    const datasets: ChartDataset<"line", { x: number; y: number }[]>[] = curves.map((curve, i) => ({
+      label: `R = ${curve.R.toPrecision(3)} Ω (Q = ${curve.Q.toFixed(2)})`,
+      data: freqs.map((f, j) => ({ x: f, y: curve.admittance[j] })),
+      borderColor: CURVE_COLORS[i % CURVE_COLORS.length],
+      backgroundColor: CURVE_COLORS[i % CURVE_COLORS.length],
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      tension: 0,
+    }));
+    return { datasets };
+  }, [freqs, curves]);
 
-  // f1/f2 per curve, color-matched to that curve -- labeled only when a
-  // single curve is shown (multiple curves would otherwise stack "f1"/"f2"
-  // text on top of each other).
+  // f1/f2 per curve, color-matched to that curve -- x-position only (no y
+  // bound), so the same annotation set applies unchanged to both the
+  // Impedance and Admittance charts even though their y-scales differ.
   const annotations = useMemo(() => {
     const anns: Record<string, AnnotationOptions> = {
       resonantLine: {
@@ -221,29 +201,19 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
     return anns;
   }, [f0, curves, showBandwidth]);
 
-  const options: ChartOptions<"line"> = useMemo(
+  const zOptions: ChartOptions<"line"> = useMemo(
     () => ({
       responsive: true,
       maintainAspectRatio: false,
-      // See RlcChart.tsx: disable animation so rapid updates (e.g. typing a
-      // manual axis value) snap instantly instead of showing a jumbled
-      // in-between transition frame.
       animation: false,
       interaction: { mode: "nearest", intersect: false, axis: "x" },
       scales: {
         x: {
           type: "logarithmic",
-          // See RlcChart.tsx: "bounds" defaults to "ticks" in Chart.js,
-          // which snaps the axis's real min/max to Chart.js's own internal
-          // tick generation instead of the actual requested Start/Finish.
-          // "data" keeps the axis honest to the real range.
           bounds: "data",
           afterBuildTicks: buildLogGraphPaperTicks,
           title: { display: true, text: "Frequency [Hz] (log scale)", color: AXIS_TEXT_COLOR },
-          grid: {
-            color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR),
-            lineWidth: logGridWidth,
-          },
+          grid: { color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR), lineWidth: logGridWidth },
           ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
           min: xZoomRange?.min,
           max: xZoomRange?.max,
@@ -252,62 +222,89 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
           type: "logarithmic",
           bounds: "data",
           afterBuildTicks: buildLogGraphPaperTicks,
-          title: { display: true, text: yLabel, color: AXIS_TEXT_COLOR },
-          grid: {
-            color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR),
-            lineWidth: logGridWidth,
-          },
+          title: { display: true, text: "Impedance |Z| [Ω] (log scale)", color: AXIS_TEXT_COLOR },
+          grid: { color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR), lineWidth: logGridWidth },
           ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
           min: yMin,
           max: yMax,
         },
       },
       plugins: {
-        legend: {
-          position: "top",
-          labels: { color: AXIS_TEXT_COLOR, boxWidth: 20, boxHeight: 2 },
-        },
+        legend: { position: "top", labels: { color: AXIS_TEXT_COLOR, boxWidth: 20, boxHeight: 2 } },
         tooltip: {
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
-            label: (ctx) => {
-              const isAdmittance = ctx.dataset.label?.startsWith("Y:");
-              const value = ctx.parsed.y as number;
-              return isAdmittance
-                ? `${ctx.dataset.label}: ${value.toExponential(3)} S`
-                : `${ctx.dataset.label}: ${value.toExponential(3)} Ω`;
-            },
+            label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toExponential(3)} Ω`,
           },
         },
         annotation: { annotations },
-        // Scroll-wheel and pinch zoom, plus click-drag panning, on both axes.
         zoom: {
-          pan: {
-            enabled: true,
-            mode: "xy",
-            // A manual pan after "Zoom to bandwidth" should stick -- clear
-            // our own React-driven range so the next unrelated re-render
-            // doesn't snap the x-axis back to the bandwidth-zoom range.
-            onPanComplete: () => setXZoomRange(null),
-          },
-          zoom: {
-            wheel: { enabled: true },
-            pinch: { enabled: true },
-            mode: "xy",
-            onZoomComplete: () => setXZoomRange(null),
-          },
+          pan: { enabled: true, mode: "xy", onPanComplete: () => setXZoomRange(null) },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "xy", onZoomComplete: () => setXZoomRange(null) },
           limits: { x: { min: "original", max: "original" }, y: { min: "original", max: "original" } },
         },
       },
     }),
-    [yLabel, yMin, yMax, annotations, xZoomRange]
+    [yMin, yMax, annotations, xZoomRange]
   );
 
+  const yOptions: ChartOptions<"line"> = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "nearest", intersect: false, axis: "x" },
+      scales: {
+        x: {
+          type: "logarithmic",
+          bounds: "data",
+          afterBuildTicks: buildLogGraphPaperTicks,
+          title: { display: true, text: "Frequency [Hz] (log scale)", color: AXIS_TEXT_COLOR },
+          grid: { color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR), lineWidth: logGridWidth },
+          ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
+          min: xZoomRange?.min,
+          max: xZoomRange?.max,
+        },
+        y: {
+          type: "logarithmic",
+          bounds: "data",
+          afterBuildTicks: buildLogGraphPaperTicks,
+          title: { display: true, text: "Admittance |Y| = 1/|Z| [S] (log scale)", color: AXIS_TEXT_COLOR },
+          grid: { color: (ctx) => logGridColor(ctx, MAJOR_GRID_COLOR, MINOR_GRID_COLOR), lineWidth: logGridWidth },
+          ticks: { color: AXIS_TEXT_COLOR, callback: logMajorOnlyLabel, autoSkip: false },
+          min: yMin,
+          max: yMax,
+        },
+      },
+      plugins: {
+        legend: { position: "top", labels: { color: AXIS_TEXT_COLOR, boxWidth: 20, boxHeight: 2 } },
+        tooltip: {
+          callbacks: {
+            title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
+            label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toExponential(3)} S`,
+          },
+        },
+        annotation: { annotations },
+        zoom: {
+          pan: { enabled: true, mode: "xy", onPanComplete: () => setXZoomRange(null) },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "xy", onZoomComplete: () => setXZoomRange(null) },
+          limits: { x: { min: "original", max: "original" }, y: { min: "original", max: "original" } },
+        },
+      },
+    }),
+    [yMin, yMax, annotations, xZoomRange]
+  );
+
+  // Toolbar buttons act on both charts together so the two stay in step --
+  // they share the same frequency axis, so a lopsided zoom between them
+  // would be confusing rather than useful.
   function zoomIn() {
-    chartRef.current?.zoom(1.2);
+    zChartRef.current?.zoom(1.2);
+    yChartRef.current?.zoom(1.2);
   }
   function zoomOut() {
-    chartRef.current?.zoom(0.8);
+    zChartRef.current?.zoom(0.8);
+    yChartRef.current?.zoom(0.8);
   }
   function resetZoom() {
     if (xZoomRange) {
@@ -320,8 +317,9 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
       setXZoomRange(null);
     } else {
       // Otherwise a wheel/pinch/drag zoom is active, tracked entirely
-      // inside the plugin -- its own reset is what undoes that.
-      chartRef.current?.resetZoom();
+      // inside each chart's own plugin instance -- its own reset undoes that.
+      zChartRef.current?.resetZoom();
+      yChartRef.current?.resetZoom();
     }
   }
   function zoomToBandwidth() {
@@ -330,11 +328,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
     // breathing room either side (in log terms) -- at the full auto/manual
     // sweep range the bandwidth region is often a tiny sliver near the
     // resonant line, easy to miss with several curves' f1/f2 lines bunched
-    // together; this snaps straight to the readable close-up view. Setting
-    // our own React state (rather than calling the zoom plugin's own
-    // zoomScale()) means the range flows through the normal options ->
-    // chart.update() path, the same reliable path every other option on
-    // this chart already uses.
+    // together; this snaps straight to the readable close-up view.
     let minF1 = Infinity;
     let maxF2 = -Infinity;
     curves.forEach((curve) => {
@@ -374,7 +368,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         </label>
       </div>
       {!showImpedance && !showAdmittance && (
-        <p className={styles.noteWarning}>Both metrics are hidden. Check at least one box above to see a curve.</p>
+        <p className={styles.noteWarning}>Both metrics are hidden. Check at least one box above to see a chart.</p>
       )}
       {showBandwidth && (
         <p className={styles.note}>
@@ -382,8 +376,23 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
           between them is that R&apos;s bandwidth.
         </p>
       )}
-      <div ref={chartWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>
-        <Line ref={chartRef} data={data} options={options} />
+      <div className={styles.splitRow}>
+        {showImpedance && (
+          <div className={styles.splitCol}>
+            <div className={styles.splitColTitle}>Impedance |Z| vs Frequency</div>
+            <div ref={zWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>
+              <Line ref={zChartRef} data={zData} options={zOptions} />
+            </div>
+          </div>
+        )}
+        {showAdmittance && (
+          <div className={styles.splitCol}>
+            <div className={styles.splitColTitle}>Admittance |Y| vs Frequency</div>
+            <div ref={yWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>
+              <Line ref={yChartRef} data={yData} options={yOptions} />
+            </div>
+          </div>
+        )}
       </div>
       <div className={styles.toolbar}>
         <button type="button" onClick={zoomIn}>Zoom in</button>

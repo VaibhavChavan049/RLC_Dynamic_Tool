@@ -114,7 +114,7 @@ export default function ComparisonChartPanel({ V, L, C, R, circuitType, f0, inde
 
   return (
     <div className={styles.chartPanel}>
-      <div className={styles.chartPanelBody} style={{ alignItems: "stretch" }}>
+      <div className={styles.chartPanelBody}>
         <div className={styles.chartCanvasWrap}>
           <div className={styles.chartTitle}>Comparison Chart #{index + 1}: Impedance and Admittance vs Frequency</div>
           <div className={styles.chartPanelTitle}>
@@ -177,16 +177,6 @@ export default function ComparisonChartPanel({ V, L, C, R, circuitType, f0, inde
             sweepParams={{ mode: xMode, start: xStart, finish: xFinish, numPoints: xNumPoints }}
             {...effectiveYRange(yMode, yMin, yMax)}
           />
-
-          <CurrentComparisonChart curves={curves} f0={f0} V={V} L={L} C={C} circuitType={circuitType} />
-
-          <QualityFactorChart curves={curves} f0={f0} />
-
-          {canRemove && (
-            <button className={styles.rListRemove} onClick={onRemove} style={{ marginTop: "0.75rem" }}>
-              Remove this chart
-            </button>
-          )}
         </div>
         <div className={styles.rightColumn}>
           <AxisControls
@@ -242,6 +232,16 @@ export default function ComparisonChartPanel({ V, L, C, R, circuitType, f0, inde
           </div>
         </div>
       </div>
+
+      <CurrentComparisonChart curves={curves} f0={f0} V={V} L={L} C={C} circuitType={circuitType} />
+
+      <QualityFactorChart curves={curves} f0={f0} />
+
+      {canRemove && (
+        <button className={styles.rListRemove} onClick={onRemove}>
+          Remove this chart
+        </button>
+      )}
     </div>
   );
 }
