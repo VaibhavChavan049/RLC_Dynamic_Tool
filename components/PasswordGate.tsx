@@ -102,11 +102,16 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--background)",
     zIndex: 9999,
   },
+  // Was vertically centered (top: 50%) -- fine on the standalone Vercel
+  // URL, but the company site embeds this in an iframe that's much taller
+  // than this short card, so centering it put the password prompt deep
+  // down the page, well below the fold. Anchoring near the top instead
+  // means it's the first thing visible either way.
   card: {
     position: "absolute",
-    top: "50%",
+    top: "3.5rem",
     left: "50%",
-    transform: "translate(-50%, -50%)",
+    transform: "translateX(-50%)",
     width: "calc(100% - 3rem)",
     maxWidth: 340,
     boxSizing: "border-box",
