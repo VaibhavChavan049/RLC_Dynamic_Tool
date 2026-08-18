@@ -117,11 +117,6 @@ const W0_UNITS: Record<string, number> = {
   Hz: 1 / (2 * Math.PI),
 };
 
-// Same palette the comparison charts cycle through for their curves --
-// reused here so the sidebar formula cards (see styles.sidebarFormulaRow)
-// read as colorful without introducing a second, unrelated color system.
-const FORMULA_ROW_COLORS = ["#1863dc", "#e5484d", "#2f9e58", "#f5a623", "#8b5cf6", "#00aeef"];
-
 // Formulas box content: Xc/XL/w0/f0/Zo are the same physics regardless of
 // topology (they depend only on L and C), but Q and the impedance/admittance
 // formulas differ -- series adds impedances directly, parallel adds
@@ -477,32 +472,27 @@ export default function Home() {
             </div>
 
             <div className={styles.panelDivider} />
-            <div className={styles.sidebarFormulasGroup} style={{ "--heading-color": "#1863dc" } as React.CSSProperties}>
-              <div className={styles.sidebarFormulasHeading}>Series RLC formulas</div>
-              {SERIES_FORMULAS.map(([name, expr], i) => (
-                <div
-                  className={styles.sidebarFormulaRow}
-                  key={`series-${name}`}
-                  style={{ "--row-color": FORMULA_ROW_COLORS[i % FORMULA_ROW_COLORS.length] } as React.CSSProperties}
-                >
-                  <span className={styles.sidebarFormulaName}>{name}</span>
-                  <span className={styles.sidebarFormulaExpr}>{expr}</span>
-                </div>
-              ))}
-            </div>
-            <div className={styles.sidebarFormulasGroup} style={{ "--heading-color": "#f5a623" } as React.CSSProperties}>
-              <div className={styles.sidebarFormulasHeading}>Parallel RLC formulas</div>
-              {PARALLEL_FORMULAS.map(([name, expr], i) => (
-                <div
-                  className={styles.sidebarFormulaRow}
-                  key={`parallel-${name}`}
-                  style={{ "--row-color": FORMULA_ROW_COLORS[i % FORMULA_ROW_COLORS.length] } as React.CSSProperties}
-                >
-                  <span className={styles.sidebarFormulaName}>{name}</span>
-                  <span className={styles.sidebarFormulaExpr}>{expr}</span>
-                </div>
-              ))}
-            </div>
+            <details className={styles.sidebarFormulasDrawer}>
+              <summary>Formula reference (Series &amp; Parallel)</summary>
+              <div className={styles.sidebarFormulasGroup}>
+                <div className={styles.sidebarFormulasHeading}>Series RLC</div>
+                {SERIES_FORMULAS.map(([name, expr]) => (
+                  <div className={styles.sidebarFormulaRow} key={`series-${name}`}>
+                    <span className={styles.sidebarFormulaName}>{name}</span>
+                    <span className={styles.sidebarFormulaExpr}>{expr}</span>
+                  </div>
+                ))}
+              </div>
+              <div className={styles.sidebarFormulasGroup}>
+                <div className={styles.sidebarFormulasHeading}>Parallel RLC</div>
+                {PARALLEL_FORMULAS.map(([name, expr]) => (
+                  <div className={styles.sidebarFormulaRow} key={`parallel-${name}`}>
+                    <span className={styles.sidebarFormulaName}>{name}</span>
+                    <span className={styles.sidebarFormulaExpr}>{expr}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
           </div>
 
           <div className={styles.main}>
