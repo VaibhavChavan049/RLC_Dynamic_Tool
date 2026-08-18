@@ -7,19 +7,21 @@
 
 /* Fixed-position stand-in for Chart.js's own floating tooltip (see
    lib/chartTooltip.ts) -- sized to hold a title + a few colored rows
-   without reflowing much as values change length. */
+   without reflowing much as values change length. Styled as a dark
+   floating card (slate-900) so it still reads as "the tooltip" against
+   the light page, same convention most chart libraries use. */
 .tooltipReadout {
   min-width: 150px;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
+  padding: 0.55rem 0.7rem;
   border-radius: 8px;
-  background: var(--surface);
+  background: #0f172a;
+  box-shadow: 0 8px 16px -4px rgba(15, 23, 42, 0.35);
   font-size: 0.76rem;
 }
 
 .tooltipReadoutTitle {
   font-weight: 700;
-  color: var(--foreground);
+  color: #ffffff;
   margin-bottom: 0.3rem;
 }
 
@@ -27,7 +29,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--muted);
+  color: #cbd5e1;
   margin-top: 0.2rem;
 }
 

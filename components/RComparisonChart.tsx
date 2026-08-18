@@ -37,8 +37,8 @@ ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, a
 // user-built, so colors just distinguish curves rather than encode meaning.
 const CURVE_COLORS = ["#1863dc", "#e5484d", "#2f9e58", "#f5a623", "#8b5cf6", "#00aeef"];
 const RESONANT_COLOR = "#8a8f98";
-const MAJOR_GRID_COLOR = "rgba(128, 128, 128, 0.4)";
-const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
+const MAJOR_GRID_COLOR = "rgba(100, 116, 139, 0.35)";
+const MINOR_GRID_COLOR = "rgba(100, 116, 139, 0.13)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
 interface Props {

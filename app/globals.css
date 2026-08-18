@@ -1,12 +1,14 @@
-/* Theme colors taken from the DRF Engineering Services brand
-   (drfengineeringservices.com): primary blue #1863dc, logo-icon cyan
-   #00aeef, near-black body text #212121, muted gray-blue #4e4b66. */
+/* Accent stays DRF's actual brand blue (#1863dc, drfengineeringservices.com)
+   rather than a generic indigo -- everything else (page/card backgrounds,
+   borders, text) adopts a slate-based neutral scale for a cleaner, less
+   flat look: soft slate-white page, pure-white cards with a crisp slate
+   border, slate-900/500 text. */
 :root {
-  --background: #ffffff;
-  --foreground: #212121;
-  --surface: #f4f4f4;
-  --border: #e4e4e7;
-  --muted: #4e4b66;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --muted: #64748b;
   --accent: #1863dc;
   --accent-strong: #0e4aa8;
   --accent-soft: #eaf2ff;

@@ -18,7 +18,7 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const BAR_COLORS = ["#1863dc", "#e5484d", "#2f9e58", "#f5a623", "#8b5cf6", "#00aeef"];
 const AXIS_TEXT_COLOR = "#8a8f98";
-const GRID_COLOR = "rgba(128, 128, 128, 0.15)";
+const GRID_COLOR = "rgba(100, 116, 139, 0.14)";
 
 type Metric = "Q" | "R" | "BW";
 
@@ -65,6 +65,15 @@ export default function QualityFactorChart({ curves, f0 }: Props) {
           data: curves.map((c) => valueFor(c)),
           backgroundColor: curves.map((_, i) => BAR_COLORS[i % BAR_COLORS.length]),
           borderRadius: 4,
+          // Without these, a single R value (no pinned comparisons yet --
+          // the common starting state) renders as one bar stretched to
+          // fill almost the entire chart width, reading as a broken solid
+          // block rather than a bar chart. Capping both the bar's share of
+          // its category slot and its absolute pixel width keeps bars a
+          // sane size whether there's 1 curve or 6.
+          barPercentage: 0.5,
+          categoryPercentage: 0.6,
+          maxBarThickness: 64,
         },
       ],
     }),

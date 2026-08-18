@@ -492,27 +492,24 @@ export default function Home() {
             </div>
 
             <div className={styles.panelDivider} />
-            <details className={styles.sidebarFormulasDrawer}>
-              <summary>Formula reference (Series &amp; Parallel)</summary>
-              <div className={styles.sidebarFormulasGroup}>
-                <div className={styles.sidebarFormulasHeading}>Series RLC</div>
-                {SERIES_FORMULAS.map(([name, expr]) => (
-                  <div className={styles.sidebarFormulaRow} key={`series-${name}`}>
-                    <span className={styles.sidebarFormulaName}>{name}</span>
-                    <span className={styles.sidebarFormulaExpr}>{expr}</span>
-                  </div>
-                ))}
-              </div>
-              <div className={styles.sidebarFormulasGroup}>
-                <div className={styles.sidebarFormulasHeading}>Parallel RLC</div>
-                {PARALLEL_FORMULAS.map(([name, expr]) => (
-                  <div className={styles.sidebarFormulaRow} key={`parallel-${name}`}>
-                    <span className={styles.sidebarFormulaName}>{name}</span>
-                    <span className={styles.sidebarFormulaExpr}>{expr}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
+            <div className={styles.sidebarFormulasGroup}>
+              <div className={styles.sidebarFormulasHeading}>Series RLC</div>
+              {SERIES_FORMULAS.map(([name, expr]) => (
+                <div className={styles.sidebarFormulaRow} key={`series-${name}`}>
+                  <span className={styles.sidebarFormulaName}>{name}</span>
+                  <span className={styles.sidebarFormulaExpr}>{expr}</span>
+                </div>
+              ))}
+            </div>
+            <div className={styles.sidebarFormulasGroup}>
+              <div className={styles.sidebarFormulasHeading}>Parallel RLC</div>
+              {PARALLEL_FORMULAS.map(([name, expr]) => (
+                <div className={styles.sidebarFormulaRow} key={`parallel-${name}`}>
+                  <span className={styles.sidebarFormulaName}>{name}</span>
+                  <span className={styles.sidebarFormulaExpr}>{expr}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className={styles.main}>
@@ -586,7 +583,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <div className={styles.metricCard}>
+              <div className={styles.metricCardHighlight}>
                 <div className={styles.metricLabel}>Quality factor Q</div>
                 <div className={styles.metricValue}>{Q.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
                 <div className={styles.metricIconRow}>

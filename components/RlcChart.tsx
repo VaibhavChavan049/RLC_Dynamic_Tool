@@ -37,8 +37,8 @@ ChartJS.register(
 const XC_COLOR = "#e5484d";
 const XL_COLOR = "#3b82f6";
 const RESONANT_COLOR = "#2f9e58";
-const MAJOR_GRID_COLOR = "rgba(128, 128, 128, 0.4)";
-const MINOR_GRID_COLOR = "rgba(128, 128, 128, 0.15)";
+const MAJOR_GRID_COLOR = "rgba(100, 116, 139, 0.35)";
+const MINOR_GRID_COLOR = "rgba(100, 116, 139, 0.13)";
 const AXIS_TEXT_COLOR = "#8a8f98";
 
 interface Props {
