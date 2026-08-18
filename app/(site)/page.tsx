@@ -552,26 +552,46 @@ export default function Home() {
                     {...effectiveYRange(chart1YMode, chart1YMin, chart1YMax)}
                   />
                 </div>
-                <AxisControls
-                  xMode={chart1XMode}
-                  onXModeChange={setChart1XMode}
-                  xStart={chart1Start}
-                  onXStartChange={setChart1Start}
-                  xFinish={chart1Finish}
-                  onXFinishChange={setChart1Finish}
-                  xNumPoints={chart1NumPoints}
-                  onXNumPointsChange={setChart1NumPoints}
-                  computedDelta={chart1Sweep.delta}
-                  downsampled={chart1Sweep.downsampled}
-                  invalidParams={chart1Sweep.invalidParams}
-                  pointCount={chart1Sweep.freqs.length}
-                  yMode={chart1YMode}
-                  onYModeChange={setChart1YMode}
-                  yMin={chart1YMin}
-                  onYMinChange={setChart1YMin}
-                  yMax={chart1YMax}
-                  onYMaxChange={setChart1YMax}
-                />
+                <div className={styles.sidebarFormulas}>
+                  <AxisControls
+                    xMode={chart1XMode}
+                    onXModeChange={setChart1XMode}
+                    xStart={chart1Start}
+                    onXStartChange={setChart1Start}
+                    xFinish={chart1Finish}
+                    onXFinishChange={setChart1Finish}
+                    xNumPoints={chart1NumPoints}
+                    onXNumPointsChange={setChart1NumPoints}
+                    computedDelta={chart1Sweep.delta}
+                    downsampled={chart1Sweep.downsampled}
+                    invalidParams={chart1Sweep.invalidParams}
+                    pointCount={chart1Sweep.freqs.length}
+                    yMode={chart1YMode}
+                    onYModeChange={setChart1YMode}
+                    yMin={chart1YMin}
+                    onYMinChange={setChart1YMin}
+                    yMax={chart1YMax}
+                    onYMaxChange={setChart1YMax}
+                  />
+                  <div className={styles.sidebarFormulasGroup}>
+                    <div className={styles.sidebarFormulasHeading}>Series RLC formulas</div>
+                    {SERIES_FORMULAS.map(([name, expr]) => (
+                      <div className={styles.sidebarFormulaRow} key={`series-${name}`}>
+                        <span className={styles.sidebarFormulaName}>{name}</span>
+                        <span className={styles.sidebarFormulaExpr}>{expr}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={styles.sidebarFormulasGroup}>
+                    <div className={styles.sidebarFormulasHeading}>Parallel RLC formulas</div>
+                    {PARALLEL_FORMULAS.map(([name, expr]) => (
+                      <div className={styles.sidebarFormulaRow} key={`parallel-${name}`}>
+                        <span className={styles.sidebarFormulaName}>{name}</span>
+                        <span className={styles.sidebarFormulaExpr}>{expr}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
