@@ -22,6 +22,7 @@ import {
 import type { TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
 import TooltipReadout from "@/components/TooltipReadout";
 import { FrequencyIcon, ImpedanceIcon, AngularFrequencyIcon, QualityFactorIcon, BandwidthIcon } from "@/components/MetricIcons";
+import LogSlider from "@/components/LogSlider";
 
 // Chart.js touches the DOM/canvas, so it must only run in the browser.
 // Load it client-side only and skip server-side rendering for it.
@@ -351,6 +352,7 @@ export default function Home() {
                     min={0}
                     onChange={(e) => setVValue(Number(e.target.value))}
                   />
+                  <LogSlider valueSI={vValue} min={0.1} max={1000} onChangeSI={setVValue} />
                 </div>
 
                 <div className={styles.field}>
@@ -372,6 +374,12 @@ export default function Home() {
                       ))}
                     </select>
                   </div>
+                  <LogSlider
+                    valueSI={lValue * L_UNITS[lUnit]}
+                    min={1e-9}
+                    max={10}
+                    onChangeSI={(v) => setLValue(v / L_UNITS[lUnit])}
+                  />
                 </div>
 
                 <div className={styles.field}>
@@ -393,6 +401,12 @@ export default function Home() {
                       ))}
                     </select>
                   </div>
+                  <LogSlider
+                    valueSI={cValue * C_UNITS[cUnit]}
+                    min={1e-12}
+                    max={1e-2}
+                    onChangeSI={(v) => setCValue(v / C_UNITS[cUnit])}
+                  />
                 </div>
 
                 <div className={styles.field}>
@@ -414,6 +428,12 @@ export default function Home() {
                       ))}
                     </select>
                   </div>
+                  <LogSlider
+                    valueSI={rValue * R_UNITS[rUnit]}
+                    min={1e-3}
+                    max={1e6}
+                    onChangeSI={(v) => setRValue(v / R_UNITS[rUnit])}
+                  />
                 </div>
               </>
             ) : (
