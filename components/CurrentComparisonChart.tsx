@@ -26,6 +26,8 @@ import {
 } from "@/lib/rlc";
 import type { AnnotationOptions } from "chartjs-plugin-annotation";
 import { downloadCsv } from "@/lib/csv";
+import { makeTooltipHandler, type TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
+import TooltipReadout from "./TooltipReadout";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin, zoomPlugin);
@@ -89,6 +91,7 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
   // through normal React state rather than the zoom plugin's own
   // zoomScale()/resetZoom() -- same "original bounds" corruption risk.
   const [xZoomRange, setXZoomRange] = useState<{ min: number; max: number } | null>(null);
+  const [readout, setReadout] = useState<TooltipReadoutData | null>(null);
 
   const rList = useMemo(() => curves.map((c) => c.R), [curves]);
 
@@ -226,6 +229,8 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
           labels: { color: AXIS_TEXT_COLOR, boxWidth: 20, boxHeight: 2 },
         },
         tooltip: {
+          enabled: false,
+          external: makeTooltipHandler(setReadout),
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
             label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toPrecision(4)} A`,
@@ -288,7 +293,10 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
           ×
         </button>
       )}
-      <div className={styles.chartTitle}>Current I vs Frequency (Selectivity Curve)</div>
+      <div className={styles.splitColHeader}>
+        <div className={styles.chartTitle} style={{ marginBottom: 0 }}>Current I vs Frequency (Selectivity Curve)</div>
+        <TooltipReadout data={readout} placeholder="Hover to see exact values" />
+      </div>
       <p className={styles.note}>
         <strong>I = V / |Z|</strong>, peaking at <strong>Imax = V / R</strong> right at resonance (where |Z| = R).
         <strong> 0.707 × Imax</strong> is the half-power level; the dotted vertical lines are that curve&apos;s f1 and

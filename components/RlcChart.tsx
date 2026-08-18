@@ -17,6 +17,7 @@ import { Line } from "react-chartjs-2";
 import { buildExportFrequencies, reactanceAtFreqs, type ReactancePoints, type SweepParams } from "@/lib/rlc";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 import { downloadCsv } from "@/lib/csv";
+import { makeTooltipHandler, type TooltipReadout } from "@/lib/chartTooltip";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(
@@ -49,9 +50,10 @@ interface Props {
   L: number;
   C: number;
   sweepParams: SweepParams;
+  onHoverChange?: (readout: TooltipReadout | null) => void;
 }
 
-export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C, sweepParams }: Props) {
+export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C, sweepParams, onHoverChange }: Props) {
   const { freqs, xc, xl } = reactance;
   const chartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -194,6 +196,13 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
           labels: { color: AXIS_TEXT_COLOR, boxWidth: 20, boxHeight: 2 },
         },
         tooltip: {
+          // Rendered into a fixed spot next to the chart instead (see
+          // onHoverChange / TooltipReadout) -- Chart.js's own floating
+          // tooltip sits right on top of the hovered point, which is
+          // especially bad here since the point is exactly what someone's
+          // trying to read off a sharp Xc/XL crossing.
+          enabled: false,
+          external: makeTooltipHandler((r) => onHoverChange?.(r)),
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
             label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toFixed(2)} Ω`,
@@ -235,7 +244,7 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
         },
       },
     }),
-    [f0, logY, yMin, yMax]
+    [f0, logY, yMin, yMax, onHoverChange]
   );
 
   function zoomIn() {

@@ -5,6 +5,49 @@
   margin-top: 0.6rem;
 }
 
+/* Fixed-position stand-in for Chart.js's own floating tooltip (see
+   lib/chartTooltip.ts) -- sized to hold a title + a few colored rows
+   without reflowing much as values change length. */
+.tooltipReadout {
+  min-width: 150px;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 0.76rem;
+}
+
+.tooltipReadoutTitle {
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 0.3rem;
+}
+
+.tooltipReadoutRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+.tooltipReadoutSwatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tooltipReadoutPlaceholder {
+  min-width: 150px;
+  padding: 0.5rem 0.65rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .toolbar button {
   padding: 0.35rem 0.7rem;
   border: 1px solid var(--border);
@@ -67,12 +110,20 @@
   min-width: 0;
 }
 
+.splitColHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
 .splitColTitle {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--foreground);
-  margin-bottom: 0.5rem;
-  text-align: center;
+  padding-top: 0.3rem;
 }
 
 @media (max-width: 700px) {

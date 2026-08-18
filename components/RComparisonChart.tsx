@@ -26,6 +26,8 @@ import {
 import type { AnnotationOptions } from "chartjs-plugin-annotation";
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 import { downloadCsv } from "@/lib/csv";
+import { makeTooltipHandler, type TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
+import TooltipReadout from "./TooltipReadout";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin, zoomPlugin);
@@ -112,6 +114,8 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
   // textbook shows these as the points where the curve crosses the
   // half-power level, bounding the shaded bandwidth region under the peak.
   const [showBandwidth, setShowBandwidth] = useState(true);
+  const [zReadout, setZReadout] = useState<TooltipReadoutData | null>(null);
+  const [yReadout, setYReadout] = useState<TooltipReadoutData | null>(null);
 
   function handleDownloadCsv() {
     // Full requested resolution, independent of whatever the chart itself
@@ -232,6 +236,10 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
       plugins: {
         legend: { position: "top", labels: { color: AXIS_TEXT_COLOR, boxWidth: 20, boxHeight: 2 } },
         tooltip: {
+          // See RlcChart.tsx: rendered into a fixed readout next to the
+          // title instead, so it never covers the point you're hovering.
+          enabled: false,
+          external: makeTooltipHandler(setZReadout),
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
             label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toExponential(3)} Ω`,
@@ -279,6 +287,8 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
       plugins: {
         legend: { position: "top", labels: { color: AXIS_TEXT_COLOR, boxWidth: 20, boxHeight: 2 } },
         tooltip: {
+          enabled: false,
+          external: makeTooltipHandler(setYReadout),
           callbacks: {
             title: (items) => `f = ${(items[0].parsed.x as number).toFixed(2)} Hz`,
             label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y as number).toExponential(3)} S`,
@@ -379,7 +389,10 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
       <div className={styles.splitRow}>
         {showImpedance && (
           <div className={styles.splitCol}>
-            <div className={styles.splitColTitle}>Impedance |Z| vs Frequency</div>
+            <div className={styles.splitColHeader}>
+              <div className={styles.splitColTitle}>Impedance |Z| vs Frequency</div>
+              <TooltipReadout data={zReadout} placeholder="Hover to see exact values" />
+            </div>
             <div ref={zWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>
               <Line ref={zChartRef} data={zData} options={zOptions} />
             </div>
@@ -387,7 +400,10 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         )}
         {showAdmittance && (
           <div className={styles.splitCol}>
-            <div className={styles.splitColTitle}>Admittance |Y| vs Frequency</div>
+            <div className={styles.splitColHeader}>
+              <div className={styles.splitColTitle}>Admittance |Y| vs Frequency</div>
+              <TooltipReadout data={yReadout} placeholder="Hover to see exact values" />
+            </div>
             <div ref={yWrapRef} style={{ height: isFullscreen ? "calc(100vh - 320px)" : 420, width: "100%" }}>
               <Line ref={yChartRef} data={yData} options={yOptions} />
             </div>

@@ -19,6 +19,8 @@ import {
   type SweepMode,
   type CircuitType,
 } from "@/lib/rlc";
+import type { TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
+import TooltipReadout from "@/components/TooltipReadout";
 
 // Chart.js touches the DOM/canvas, so it must only run in the browser.
 // Load it client-side only and skip server-side rendering for it.
@@ -197,6 +199,7 @@ export default function Home() {
   const [chart1YMode, setChart1YMode] = useState<SweepMode>("auto");
   const [chart1YMin, setChart1YMin] = useState(0.1);
   const [chart1YMax, setChart1YMax] = useState(1000);
+  const [chart1Readout, setChart1Readout] = useState<TooltipReadoutData | null>(null);
 
   // Comparison charts (Impedance/Admittance/Quality Factor) -- "+ Add
   // comparison chart" below creates more of these, each one an independent
@@ -582,9 +585,12 @@ export default function Home() {
                     L={L}
                     C={C}
                     sweepParams={{ mode: chart1XMode, start: chart1Start, finish: chart1Finish, numPoints: chart1NumPoints }}
+                    onHoverChange={setChart1Readout}
                     {...effectiveYRange(chart1YMode, chart1YMin, chart1YMax)}
                   />
                 </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <TooltipReadout data={chart1Readout} placeholder="Hover the chart to see exact values" />
                 <AxisControls
                   xMode={chart1XMode}
                   onXModeChange={setChart1XMode}
@@ -605,6 +611,7 @@ export default function Home() {
                   yMax={chart1YMax}
                   onYMaxChange={setChart1YMax}
                 />
+                </div>
               </div>
             </div>
 
