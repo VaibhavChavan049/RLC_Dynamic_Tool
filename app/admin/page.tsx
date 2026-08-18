@@ -9,6 +9,10 @@ export default function AdminPage() {
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [stats, setStats] = useState<{ visitCount: number; lastVisitAt: string | null } | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
   async function handleSave() {
     setSaving(true);
     setStatus(null);
@@ -29,6 +33,28 @@ export default function AdminPage() {
       setStatus({ ok: false, message: "Network error -- please try again." });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCheckStats() {
+    setLoadingStats(true);
+    setStatsError(null);
+    try {
+      const res = await fetch("/api/admin/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminKey }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setStats({ visitCount: data.visitCount, lastVisitAt: data.lastVisitAt });
+      } else {
+        setStatsError(data.message ?? "Something went wrong.");
+      }
+    } catch {
+      setStatsError("Network error -- please try again.");
+    } finally {
+      setLoadingStats(false);
     }
   }
 
@@ -78,6 +104,34 @@ export default function AdminPage() {
           </button>
           {status && (
             <p style={{ fontSize: "0.85rem", color: status.ok ? "#2f9e58" : "#e5484d" }}>{status.message}</p>
+          )}
+        </div>
+
+        <div>
+          <h1 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Visits</h1>
+          <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.9rem" }}>
+            Counts every time someone enters the correct password (uses the same admin key above).
+          </p>
+        </div>
+
+        <div className={styles.panel}>
+          <button type="button" className={styles.addButton} onClick={handleCheckStats} disabled={loadingStats || !adminKey}>
+            {loadingStats ? "Checking..." : "Check visit stats"}
+          </button>
+          {statsError && <p style={{ fontSize: "0.85rem", color: "#e5484d" }}>{statsError}</p>}
+          {stats && (
+            <div className={styles.metrics} style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div className={styles.metricCardHighlight}>
+                <div className={styles.metricLabel}>Total successful visits</div>
+                <div className={styles.metricValue}>{stats.visitCount.toLocaleString()}</div>
+              </div>
+              <div className={styles.metricCard}>
+                <div className={styles.metricLabel}>Last visit</div>
+                <div className={styles.metricValue} style={{ fontSize: "0.95rem" }}>
+                  {stats.lastVisitAt ? new Date(stats.lastVisitAt).toLocaleString() : "No visits yet"}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

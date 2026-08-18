@@ -1,3 +1,5 @@
+import { upsertEdgeConfigItems } from "@/lib/edgeConfigWrite";
+
 // Lets a non-technical admin rotate the visitor-facing password (see
 // app/admin/page.tsx) without ever touching code or triggering a redeploy --
 // the new value is written straight into the Edge Config store that
@@ -13,38 +15,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, message: "New password must be at least 4 characters." }, { status: 400 });
   }
 
-  const edgeConfigId = process.env.EDGE_CONFIG_ID;
-  const apiToken = process.env.VERCEL_API_TOKEN;
-  const teamId = process.env.VERCEL_TEAM_ID;
-  if (!edgeConfigId || !apiToken) {
-    return Response.json(
-      { ok: false, message: "Server isn't fully configured yet (missing VERCEL_API_TOKEN)." },
-      { status: 500 }
-    );
-  }
-
-  // Vercel's write API for this lives under /v1/global-config/ now (the
-  // product was renamed from "Edge Config" to "Global Config" -- reads via
-  // @vercel/edge-config in check-password/route.ts still work unchanged,
-  // but this REST endpoint moved and /v1/edge-config/ 404s).
-  const url = new URL(`https://api.vercel.com/v1/global-config/${edgeConfigId}/items`);
-  if (teamId) url.searchParams.set("teamId", teamId);
-
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      items: [{ operation: "upsert", key: "sitePassword", value: newPassword.trim() }],
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    return Response.json({ ok: false, message: `Vercel API error (${res.status}): ${detail}` }, { status: 502 });
-  }
-
-  return Response.json({ ok: true });
+  const result = await upsertEdgeConfigItems([{ key: "sitePassword", value: newPassword.trim() }]);
+  return Response.json(result, { status: result.ok ? 200 : 502 });
 }

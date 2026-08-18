@@ -45,6 +45,8 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
       });
       const data = await res.json();
       if (data.ok) {
+        // Best-effort -- a failed/slow count shouldn't block getting in.
+        fetch("/api/track-visit", { method: "POST", keepalive: true }).catch(() => {});
         sessionStorage.setItem(STORAGE_KEY, "true");
         window.location.reload();
       } else {
