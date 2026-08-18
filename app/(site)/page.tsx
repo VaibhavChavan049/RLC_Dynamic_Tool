@@ -513,18 +513,6 @@ export default function Home() {
           </div>
 
           <div className={styles.main}>
-            <details className={styles.formulasBox}>
-              <summary>Formulas used ({circuitType === "series" ? "Series" : "Parallel"} RLC)</summary>
-              <div className={styles.formulasList}>
-                {(circuitType === "series" ? SERIES_FORMULAS : PARALLEL_FORMULAS).map(([name, expr]) => (
-                  <div className={styles.formulaRow} key={name}>
-                    <span className={styles.formulaName}>{name}</span>
-                    <span className={styles.formulaExpr}>{expr}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
-
             <div className={styles.metrics}>
               <div className={styles.metricCardHighlight}>
                 <div className={styles.metricRow}>

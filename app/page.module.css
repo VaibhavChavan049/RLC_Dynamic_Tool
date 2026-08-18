@@ -109,6 +109,32 @@
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
+  /* Sticks near the top of the viewport while scrolling through however
+     many comparison charts are stacked up on the right -- the previous
+     fix (align-items: stretch on .layout) just stretched this panel's
+     background to match that column's height, which only reads as
+     "filled in" until you add a 2nd/3rd comparison chart and the height
+     gap grows again. Sticky sidesteps the mismatch entirely: the L/C/R
+     inputs and formula reference stay in view the whole time instead of
+     the page needing a fixed height relationship at all. Stretch (kept
+     on .layout) is what gives the sticky element room to travel through
+     the full column height before it runs out and unsticks. */
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+/* Must come after the base .panel rule above -- same selector specificity,
+   so an earlier media query block would otherwise lose to it in source
+   order regardless of which one the viewport currently matches. */
+@media (max-width: 800px) {
+  .panel {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
 }
 
 .panelTitle {
@@ -399,45 +425,6 @@
   .chartPanelBody {
     flex-direction: column;
   }
-}
-
-.formulasBox {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.9rem 1.25rem;
-}
-
-.formulasBox summary {
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.formulasList {
-  margin-top: 0.9rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.formulaRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  font-size: 0.85rem;
-  align-items: baseline;
-}
-
-.formulaName {
-  color: var(--muted);
-  min-width: 170px;
-}
-
-.formulaExpr {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--accent-strong);
 }
 
 .panelDivider {
