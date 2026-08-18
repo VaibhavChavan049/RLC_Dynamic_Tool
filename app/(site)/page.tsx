@@ -539,7 +539,7 @@ export default function Home() {
                 </div>
                 <div className={styles.metricIconRow}>
                   <div className={styles.metricIconWrap}>
-                    <FrequencyIcon size={18} />
+                    <FrequencyIcon size={22} />
                   </div>
                 </div>
               </div>
@@ -548,7 +548,7 @@ export default function Home() {
                 <div className={styles.metricValue}>{Zo.toLocaleString(undefined, { maximumFractionDigits: 4 })} Ω</div>
                 <div className={styles.metricIconRow}>
                   <div className={styles.metricIconWrap}>
-                    <ImpedanceIcon size={18} />
+                    <ImpedanceIcon size={22} />
                   </div>
                 </div>
               </div>
@@ -572,7 +572,7 @@ export default function Home() {
                 </div>
                 <div className={styles.metricIconRow}>
                   <div className={styles.metricIconWrap}>
-                    <AngularFrequencyIcon size={18} />
+                    <AngularFrequencyIcon size={22} />
                   </div>
                 </div>
               </div>
@@ -581,7 +581,7 @@ export default function Home() {
                 <div className={styles.metricValue}>{Q.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
                 <div className={styles.metricIconRow}>
                   <div className={styles.metricIconWrap}>
-                    <QualityFactorIcon size={18} />
+                    <QualityFactorIcon size={22} />
                   </div>
                 </div>
               </div>
@@ -590,7 +590,7 @@ export default function Home() {
                 <div className={styles.metricValue}>{BW.toLocaleString(undefined, { maximumFractionDigits: 4 })} Hz</div>
                 <div className={styles.metricIconRow}>
                   <div className={styles.metricIconWrap}>
-                    <BandwidthIcon size={18} />
+                    <BandwidthIcon size={22} />
                   </div>
                 </div>
               </div>

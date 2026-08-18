@@ -258,27 +258,24 @@
    top-corner badge would be). Bottom of the card is always clear. */
 .metricIconRow {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 0.6rem;
+  justify-content: center;
+  margin-top: 0.65rem;
 }
 
 /* Small colored badge -- a solid tinted chip (not a faded watermark) so
    it reads as a clear, bright accent rather than disappearing into the
-   card background. */
+   card background. Same styling on every card, highlighted or not --
+   the badge is just a decorative label for the metric, not a status
+   indicator, so it shouldn't visually single out f0. */
 .metricIconWrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--accent-soft);
   color: var(--accent);
-}
-
-.metricCardHighlight .metricIconWrap {
-  background: var(--accent);
-  color: #ffffff;
 }
 
 .unitSelect {
