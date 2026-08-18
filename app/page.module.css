@@ -119,26 +119,34 @@
   color: var(--muted);
 }
 
+/* Rounded pill-style segmented control -- a track with padding around a
+   fully rounded active pill, rather than a square-cornered strip with a
+   flat-filled active half. */
 .modeToggle {
   display: flex;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
 }
 
 .modeToggle button {
   flex: 1;
-  padding: 0.5rem 0.4rem;
+  padding: 0.5rem 0.6rem;
   font-size: 0.82rem;
   border: none;
+  border-radius: 999px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .modeToggle button.active {
   background: var(--accent);
   color: white;
+  box-shadow: 0 2px 6px rgba(24, 99, 220, 0.35);
 }
 
 .field {
@@ -223,15 +231,21 @@
 }
 
 .metricCard {
-  background: var(--surface);
+  /* Soft two-tone wash (brand blue -> cyan) instead of a flat surface
+     fill, plus a faint colored ring/glow -- stays inside the DRF blue
+     palette rather than a generic purple gradient, but reads as far
+     less flat than a plain gray card. */
+  background: linear-gradient(150deg, rgba(24, 99, 220, 0.09) 0%, rgba(0, 174, 239, 0.07) 100%), var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 0.9rem 1rem;
+  box-shadow: 0 1px 2px rgba(24, 99, 220, 0.06), 0 6px 18px rgba(24, 99, 220, 0.08);
 }
 
 .metricCardHighlight {
   composes: metricCard;
   border-top: 3px solid var(--accent);
+  background: linear-gradient(150deg, rgba(24, 99, 220, 0.14) 0%, rgba(0, 174, 239, 0.1) 100%), var(--surface);
 }
 
 .metricCardHighlight .metricValue {
