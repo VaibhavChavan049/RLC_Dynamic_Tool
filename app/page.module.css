@@ -254,33 +254,26 @@
   gap: 0.5rem;
 }
 
-/* Watermark-style icon in the card's back corner -- decorative, so it sits
-   behind/beside the real numbers instead of competing with them for
-   attention. */
-.metricIcon {
+/* Small colored badge in the card's back corner -- a solid tinted chip
+   (not a faded watermark) so it reads as a clear, bright accent rather
+   than disappearing into the card background. */
+.metricIconWrap {
   position: absolute;
-  top: 0.7rem;
-  right: 0.75rem;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
   color: var(--accent);
-  opacity: 0.35;
 }
 
-.metricCardHighlight .metricIcon {
-  opacity: 0.55;
-}
-
-.metricFormula {
-  margin-top: 0.5rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid var(--border);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.metricFormula b {
-  color: var(--foreground);
-  font-weight: 600;
+.metricCardHighlight .metricIconWrap {
+  background: var(--accent);
+  color: #ffffff;
 }
 
 .unitSelect {
