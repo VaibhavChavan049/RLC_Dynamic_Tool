@@ -223,12 +223,10 @@
 }
 
 .metricCard {
-  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.9rem 1rem;
-  overflow: hidden;
 }
 
 .metricCardHighlight {
@@ -254,13 +252,20 @@
   gap: 0.5rem;
 }
 
-/* Small colored badge in the card's back corner -- a solid tinted chip
-   (not a faded watermark) so it reads as a clear, bright accent rather
-   than disappearing into the card background. */
+/* Sits below the value, not absolutely positioned in the top corner --
+   that overlapped the unit dropdown on f0/w0 (whose label text wraps to
+   two lines at narrower widths, pushing the dropdown down into where a
+   top-corner badge would be). Bottom of the card is always clear. */
+.metricIconRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.6rem;
+}
+
+/* Small colored badge -- a solid tinted chip (not a faded watermark) so
+   it reads as a clear, bright accent rather than disappearing into the
+   card background. */
 .metricIconWrap {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
   width: 28px;
   height: 28px;
   border-radius: 8px;

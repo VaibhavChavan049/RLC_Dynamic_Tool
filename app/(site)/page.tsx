@@ -520,9 +520,6 @@ export default function Home() {
 
             <div className={styles.metrics}>
               <div className={styles.metricCardHighlight}>
-                <div className={styles.metricIconWrap}>
-                  <FrequencyIcon size={18} />
-                </div>
                 <div className={styles.metricRow}>
                   <div className={styles.metricLabel}>Resonant frequency f0</div>
                   <select
@@ -540,18 +537,22 @@ export default function Home() {
                 <div className={styles.metricValue}>
                   {(f0 * F0_UNITS[f0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {f0Unit}
                 </div>
+                <div className={styles.metricIconRow}>
+                  <div className={styles.metricIconWrap}>
+                    <FrequencyIcon size={18} />
+                  </div>
+                </div>
               </div>
               <div className={styles.metricCard}>
-                <div className={styles.metricIconWrap}>
-                  <ImpedanceIcon size={18} />
-                </div>
                 <div className={styles.metricLabel}>Characteristic impedance Zo</div>
                 <div className={styles.metricValue}>{Zo.toLocaleString(undefined, { maximumFractionDigits: 4 })} Ω</div>
+                <div className={styles.metricIconRow}>
+                  <div className={styles.metricIconWrap}>
+                    <ImpedanceIcon size={18} />
+                  </div>
+                </div>
               </div>
               <div className={styles.metricCard}>
-                <div className={styles.metricIconWrap}>
-                  <AngularFrequencyIcon size={18} />
-                </div>
                 <div className={styles.metricRow}>
                   <div className={styles.metricLabel}>Angular resonant frequency w0</div>
                   <select
@@ -569,20 +570,29 @@ export default function Home() {
                 <div className={styles.metricValue}>
                   {(w0 * W0_UNITS[w0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {w0Unit}
                 </div>
+                <div className={styles.metricIconRow}>
+                  <div className={styles.metricIconWrap}>
+                    <AngularFrequencyIcon size={18} />
+                  </div>
+                </div>
               </div>
               <div className={styles.metricCard}>
-                <div className={styles.metricIconWrap}>
-                  <QualityFactorIcon size={18} />
-                </div>
                 <div className={styles.metricLabel}>Quality factor Q</div>
                 <div className={styles.metricValue}>{Q.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+                <div className={styles.metricIconRow}>
+                  <div className={styles.metricIconWrap}>
+                    <QualityFactorIcon size={18} />
+                  </div>
+                </div>
               </div>
               <div className={styles.metricCard}>
-                <div className={styles.metricIconWrap}>
-                  <BandwidthIcon size={18} />
-                </div>
                 <div className={styles.metricLabel}>Bandwidth BW</div>
                 <div className={styles.metricValue}>{BW.toLocaleString(undefined, { maximumFractionDigits: 4 })} Hz</div>
+                <div className={styles.metricIconRow}>
+                  <div className={styles.metricIconWrap}>
+                    <BandwidthIcon size={18} />
+                  </div>
+                </div>
               </div>
             </div>
 
