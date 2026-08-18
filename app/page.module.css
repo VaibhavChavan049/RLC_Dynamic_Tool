@@ -223,10 +223,12 @@
 }
 
 .metricCard {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.9rem 1rem;
+  overflow: hidden;
 }
 
 .metricCardHighlight {
@@ -250,6 +252,35 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+/* Watermark-style icon in the card's back corner -- decorative, so it sits
+   behind/beside the real numbers instead of competing with them for
+   attention. */
+.metricIcon {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.75rem;
+  color: var(--accent);
+  opacity: 0.35;
+}
+
+.metricCardHighlight .metricIcon {
+  opacity: 0.55;
+}
+
+.metricFormula {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.metricFormula b {
+  color: var(--foreground);
+  font-weight: 600;
 }
 
 .unitSelect {

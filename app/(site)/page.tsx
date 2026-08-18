@@ -21,6 +21,8 @@ import {
 } from "@/lib/rlc";
 import type { TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
 import TooltipReadout from "@/components/TooltipReadout";
+import { Fraction, Sqrt } from "@/components/MathNotation";
+import { FrequencyIcon, ImpedanceIcon, AngularFrequencyIcon, QualityFactorIcon, BandwidthIcon } from "@/components/MetricIcons";
 
 // Chart.js touches the DOM/canvas, so it must only run in the browser.
 // Load it client-side only and skip server-side rendering for it.
@@ -519,6 +521,7 @@ export default function Home() {
 
             <div className={styles.metrics}>
               <div className={styles.metricCardHighlight}>
+                <FrequencyIcon size={22} className={styles.metricIcon} />
                 <div className={styles.metricRow}>
                   <div className={styles.metricLabel}>Resonant frequency f0</div>
                   <select
@@ -536,12 +539,20 @@ export default function Home() {
                 <div className={styles.metricValue}>
                   {(f0 * F0_UNITS[f0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {f0Unit}
                 </div>
+                <div className={styles.metricFormula}>
+                  <b>f0</b> = <Fraction num="ω0" den="2π" />
+                </div>
               </div>
               <div className={styles.metricCard}>
+                <ImpedanceIcon size={22} className={styles.metricIcon} />
                 <div className={styles.metricLabel}>Characteristic impedance Zo</div>
                 <div className={styles.metricValue}>{Zo.toLocaleString(undefined, { maximumFractionDigits: 4 })} Ω</div>
+                <div className={styles.metricFormula}>
+                  <b>Zo</b> = <Sqrt>L / C</Sqrt>
+                </div>
               </div>
               <div className={styles.metricCard}>
+                <AngularFrequencyIcon size={22} className={styles.metricIcon} />
                 <div className={styles.metricRow}>
                   <div className={styles.metricLabel}>Angular resonant frequency w0</div>
                   <select
@@ -559,14 +570,25 @@ export default function Home() {
                 <div className={styles.metricValue}>
                   {(w0 * W0_UNITS[w0Unit]).toLocaleString(undefined, { maximumFractionDigits: 4 })} {w0Unit}
                 </div>
+                <div className={styles.metricFormula}>
+                  <b>ω0</b> = <Fraction num="1" den={<Sqrt>L·C</Sqrt>} />
+                </div>
               </div>
               <div className={styles.metricCard}>
+                <QualityFactorIcon size={22} className={styles.metricIcon} />
                 <div className={styles.metricLabel}>Quality factor Q</div>
                 <div className={styles.metricValue}>{Q.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+                <div className={styles.metricFormula}>
+                  <b>Q</b> = {circuitType === "series" ? <Fraction num="Zo" den="R" /> : <Fraction num="R" den="Zo" />}
+                </div>
               </div>
               <div className={styles.metricCard}>
+                <BandwidthIcon size={22} className={styles.metricIcon} />
                 <div className={styles.metricLabel}>Bandwidth BW</div>
                 <div className={styles.metricValue}>{BW.toLocaleString(undefined, { maximumFractionDigits: 4 })} Hz</div>
+                <div className={styles.metricFormula}>
+                  <b>BW</b> = <Fraction num="f0" den="Q" />
+                </div>
               </div>
             </div>
 
