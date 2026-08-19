@@ -110,20 +110,21 @@
   flex-direction: column;
   gap: 1.1rem;
   /* Sticks near the top of the viewport while scrolling through however
-     many comparison charts are stacked up on the right -- the previous
-     fix (align-items: stretch on .layout) just stretched this panel's
-     background to match that column's height, which only reads as
-     "filled in" until you add a 2nd/3rd comparison chart and the height
-     gap grows again. Sticky sidesteps the mismatch entirely: the L/C/R
-     inputs and formula reference stay in view the whole time instead of
-     the page needing a fixed height relationship at all. Stretch (kept
-     on .layout) is what gives the sticky element room to travel through
-     the full column height before it runs out and unsticks. */
+     many comparison charts are stacked up on the right. No max-height/
+     overflow-y here on purpose -- capping the box's height made it render
+     at that full fixed height for as long as it stayed "stuck", including
+     right at the end of the page where the right column had already run
+     out of content, which forced the page to grow taller just to give the
+     sticky element room to finish unsticking (and produced a second,
+     confusing inner scrollbar on top of the page's own). Left at its
+     natural content height instead, position: sticky's own built-in
+     "don't overflow past your containing block" behavior keeps it aligned
+     with the right column with no extra page length -- see the note on
+     the formula card sizing below for why that only works as long as this
+     panel's natural height stays comfortably under the right column's. */
   position: sticky;
   top: 1.5rem;
   align-self: start;
-  max-height: calc(100vh - 3rem);
-  overflow-y: auto;
 }
 
 /* Must come after the base .panel rule above -- same selector specificity,
@@ -132,8 +133,6 @@
 @media (max-width: 800px) {
   .panel {
     position: static;
-    max-height: none;
-    overflow-y: visible;
   }
 }
 
@@ -435,28 +434,31 @@
 
 /* Clean, subtle slate/mono styling -- no per-row rainbow coloring, so the
    reference card recedes behind the actual graphs and inputs instead of
-   competing with them. */
+   competing with them. Sized to stay comfortably under a typical right
+   column's height (RlcChart + at least one full ComparisonChartPanel) --
+   see the sizing note on .panel above for why that matters for the
+   sticky positioning, not just aesthetics. */
 .sidebarFormulasGroup {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1.15rem 1.3rem;
+  padding: 0.85rem 1rem;
   background: var(--surface);
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
 }
 
 .sidebarFormulasHeading {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.7rem;
 }
 
 .sidebarFormulaRow {
-  margin-bottom: 0.85rem;
-  padding: 0.75rem 0.9rem;
-  border-radius: 8px;
+  margin-bottom: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 7px;
   border-left: 3px solid var(--border);
   background: var(--background);
 }
@@ -467,15 +469,15 @@
 
 .sidebarFormulaName {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .sidebarFormulaExpr {
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--foreground);
   word-break: break-word;
