@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Chart as ChartJS,
   LogarithmicScale,
@@ -18,6 +18,7 @@ import { buildExportFrequencies, reactanceAtFreqs, type ReactancePoints, type Sw
 import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth } from "@/lib/logAxis";
 import { downloadCsv } from "@/lib/csv";
 import { makeTooltipHandler, type TooltipReadout } from "@/lib/chartTooltip";
+import { useFullscreenToggle } from "./useFullscreenToggle";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(
@@ -58,16 +59,7 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
   const chartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
-  // Native Fullscreen API rather than a CSS overlay -- the browser handles
-  // Escape-to-exit for free.
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  useEffect(() => {
-    function handleFullscreenChange() {
-      setIsFullscreen(document.fullscreenElement === containerRef.current);
-    }
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
+  const { isFullscreen, blocked: fullscreenBlocked, toggleFullscreen } = useFullscreenToggle(containerRef);
   // Chart.js's own responsive:true resize doesn't reliably catch a size
   // change driven by exiting the browser's native Fullscreen mode -- a
   // fixed-delay nudge (the previous approach here) raced the exit
@@ -92,13 +84,6 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  function toggleFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      containerRef.current?.requestFullscreen();
-    }
-  }
 
   function handleDownloadCsv() {
     // Full requested resolution, independent of whatever the chart itself
@@ -282,6 +267,12 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
         </button>
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
+      {fullscreenBlocked && (
+        <p className={styles.noteWarning}>
+          Fullscreen isn&apos;t allowed by the page this is embedded in (its &lt;iframe&gt; needs an
+          allow=&quot;fullscreen&quot; attribute). Open the tool&apos;s own page directly to use Fullscreen.
+        </p>
+      )}
     </div>
   );
 }

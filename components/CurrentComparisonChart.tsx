@@ -28,6 +28,7 @@ import type { AnnotationOptions } from "chartjs-plugin-annotation";
 import { downloadCsv } from "@/lib/csv";
 import { makeTooltipHandler, type TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
 import TooltipReadout from "./TooltipReadout";
+import { useFullscreenToggle } from "./useFullscreenToggle";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin, zoomPlugin);
@@ -59,14 +60,7 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
   const chartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  useEffect(() => {
-    function handleFullscreenChange() {
-      setIsFullscreen(document.fullscreenElement === containerRef.current);
-    }
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
+  const { isFullscreen, blocked: fullscreenBlocked, toggleFullscreen } = useFullscreenToggle(containerRef);
   // See RComparisonChart.tsx for why this watches the wrap div's real
   // measured size (via ResizeObserver) rather than a fixed-delay resize().
   useEffect(() => {
@@ -80,13 +74,6 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  function toggleFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      containerRef.current?.requestFullscreen();
-    }
-  }
   // See RComparisonChart.tsx for why "Zoom to bandwidth" drives this
   // through normal React state rather than the zoom plugin's own
   // zoomScale()/resetZoom() -- same "original bounds" corruption risk.
@@ -315,6 +302,12 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
         </button>
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
+      {fullscreenBlocked && (
+        <p className={styles.noteWarning}>
+          Fullscreen isn&apos;t allowed by the page this is embedded in (its &lt;iframe&gt; needs an
+          allow=&quot;fullscreen&quot; attribute). Open the tool&apos;s own page directly to use Fullscreen.
+        </p>
+      )}
     </div>
   );
 }

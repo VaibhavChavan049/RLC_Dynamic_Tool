@@ -28,6 +28,7 @@ import { buildLogGraphPaperTicks, logMajorOnlyLabel, logGridColor, logGridWidth 
 import { downloadCsv } from "@/lib/csv";
 import { makeTooltipHandler, type TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
 import TooltipReadout from "./TooltipReadout";
+import { useFullscreenToggle } from "./useFullscreenToggle";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(LogarithmicScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin, zoomPlugin);
@@ -77,25 +78,9 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
   const containerRef = useRef<HTMLDivElement>(null);
   const zWrapRef = useRef<HTMLDivElement>(null);
   const yWrapRef = useRef<HTMLDivElement>(null);
-  // Native Fullscreen API rather than a CSS overlay -- the browser handles
-  // Escape-to-exit for free.
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  useEffect(() => {
-    function handleFullscreenChange() {
-      setIsFullscreen(document.fullscreenElement === containerRef.current);
-    }
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
+  const { isFullscreen, blocked: fullscreenBlocked, toggleFullscreen } = useFullscreenToggle(containerRef);
   useChartResize(zWrapRef, zChartRef);
   useChartResize(yWrapRef, yChartRef);
-  function toggleFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      containerRef.current?.requestFullscreen();
-    }
-  }
   // "Zoom to bandwidth" sets this explicitly (fed straight into both charts'
   // x-scale options below); "Reset zoom" clears it back to null so
   // bounds: "data" auto-computes the full range again. Driving this through
@@ -422,6 +407,12 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
         </button>
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
+      {fullscreenBlocked && (
+        <p className={styles.noteWarning}>
+          Fullscreen isn&apos;t allowed by the page this is embedded in (its &lt;iframe&gt; needs an
+          allow=&quot;fullscreen&quot; attribute). Open the tool&apos;s own page directly to use Fullscreen.
+        </p>
+      )}
     </div>
   );
 }
