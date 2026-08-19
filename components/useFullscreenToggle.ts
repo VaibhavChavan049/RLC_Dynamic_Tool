@@ -7,14 +7,16 @@ import { useEffect, useState, type RefObject } from "react";
 // (RlcChart, RComparisonChart, CurrentComparisonChart).
 export function useFullscreenToggle(containerRef: RefObject<HTMLElement | null>) {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // A page embedding this app in an <iframe> without `allow="fullscreen"`
-  // makes requestFullscreen() reject with a permissions-policy error --
-  // without this, the button just silently does nothing, which is
-  // indistinguishable from a real bug. Catching it lets the button explain
-  // what's actually wrong instead.
-  const [blocked, setBlocked] = useState(false);
+  // document.fullscreenEnabled reflects this exact document's Permissions
+  // Policy -- false when, say, an embedding page's <iframe> is missing
+  // allow="fullscreen". Checking it upfront means the caller can just not
+  // render the button at all in that case, rather than showing a visitor
+  // a button that does nothing (or an error message) when clicked --
+  // neither looks good on an embedded, customer-facing page.
+  const [fullscreenSupported, setFullscreenSupported] = useState(true);
 
   useEffect(() => {
+    setFullscreenSupported(document.fullscreenEnabled);
     function handleFullscreenChange() {
       setIsFullscreen(document.fullscreenElement === containerRef.current);
     }
@@ -27,9 +29,8 @@ export function useFullscreenToggle(containerRef: RefObject<HTMLElement | null>)
       document.exitFullscreen();
       return;
     }
-    setBlocked(false);
-    containerRef.current?.requestFullscreen().catch(() => setBlocked(true));
+    containerRef.current?.requestFullscreen().catch(() => {});
   }
 
-  return { isFullscreen, blocked, toggleFullscreen };
+  return { isFullscreen, fullscreenSupported, toggleFullscreen };
 }

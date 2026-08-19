@@ -60,7 +60,7 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
   const chartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
-  const { isFullscreen, blocked: fullscreenBlocked, toggleFullscreen } = useFullscreenToggle(containerRef);
+  const { isFullscreen, fullscreenSupported, toggleFullscreen } = useFullscreenToggle(containerRef);
   // See RComparisonChart.tsx for why this watches the wrap div's real
   // measured size (via ResizeObserver) rather than a fixed-delay resize().
   useEffect(() => {
@@ -297,17 +297,13 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
         <button type="button" onClick={zoomOut}>Zoom out</button>
         <button type="button" onClick={zoomToBandwidth}>Zoom to bandwidth</button>
         <button type="button" onClick={resetZoom}>Reset zoom</button>
-        <button type="button" onClick={toggleFullscreen}>
-          {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
-        </button>
+        {fullscreenSupported && (
+          <button type="button" onClick={toggleFullscreen}>
+            {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+          </button>
+        )}
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
-      {fullscreenBlocked && (
-        <p className={styles.noteWarning}>
-          Fullscreen isn&apos;t allowed by the page this is embedded in (its &lt;iframe&gt; needs an
-          allow=&quot;fullscreen&quot; attribute). Open the tool&apos;s own page directly to use Fullscreen.
-        </p>
-      )}
     </div>
   );
 }

@@ -59,7 +59,7 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
   const chartRef = useRef<ChartJS<"line">>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
-  const { isFullscreen, blocked: fullscreenBlocked, toggleFullscreen } = useFullscreenToggle(containerRef);
+  const { isFullscreen, fullscreenSupported, toggleFullscreen } = useFullscreenToggle(containerRef);
   // Chart.js's own responsive:true resize doesn't reliably catch a size
   // change driven by exiting the browser's native Fullscreen mode -- a
   // fixed-delay nudge (the previous approach here) raced the exit
@@ -262,17 +262,13 @@ export default function RlcChart({ reactance, f0, logY = false, yMin, yMax, L, C
         <button type="button" onClick={zoomIn}>Zoom in</button>
         <button type="button" onClick={zoomOut}>Zoom out</button>
         <button type="button" onClick={resetZoom}>Reset zoom</button>
-        <button type="button" onClick={toggleFullscreen}>
-          {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
-        </button>
+        {fullscreenSupported && (
+          <button type="button" onClick={toggleFullscreen}>
+            {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+          </button>
+        )}
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
-      {fullscreenBlocked && (
-        <p className={styles.noteWarning}>
-          Fullscreen isn&apos;t allowed by the page this is embedded in (its &lt;iframe&gt; needs an
-          allow=&quot;fullscreen&quot; attribute). Open the tool&apos;s own page directly to use Fullscreen.
-        </p>
-      )}
     </div>
   );
 }

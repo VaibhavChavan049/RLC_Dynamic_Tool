@@ -78,7 +78,7 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
   const containerRef = useRef<HTMLDivElement>(null);
   const zWrapRef = useRef<HTMLDivElement>(null);
   const yWrapRef = useRef<HTMLDivElement>(null);
-  const { isFullscreen, blocked: fullscreenBlocked, toggleFullscreen } = useFullscreenToggle(containerRef);
+  const { isFullscreen, fullscreenSupported, toggleFullscreen } = useFullscreenToggle(containerRef);
   useChartResize(zWrapRef, zChartRef);
   useChartResize(yWrapRef, yChartRef);
   // "Zoom to bandwidth" sets this explicitly (fed straight into both charts'
@@ -402,17 +402,13 @@ export default function RComparisonChart({ freqs, curves, f0, yMin, yMax, L, C, 
           <button type="button" onClick={zoomToBandwidth}>Zoom to bandwidth</button>
         )}
         <button type="button" onClick={resetZoom}>Reset zoom</button>
-        <button type="button" onClick={toggleFullscreen}>
-          {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
-        </button>
+        {fullscreenSupported && (
+          <button type="button" onClick={toggleFullscreen}>
+            {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+          </button>
+        )}
         <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
       </div>
-      {fullscreenBlocked && (
-        <p className={styles.noteWarning}>
-          Fullscreen isn&apos;t allowed by the page this is embedded in (its &lt;iframe&gt; needs an
-          allow=&quot;fullscreen&quot; attribute). Open the tool&apos;s own page directly to use Fullscreen.
-        </p>
-      )}
     </div>
   );
 }
