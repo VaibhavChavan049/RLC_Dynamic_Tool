@@ -71,16 +71,17 @@
    (same source, but ".toolbar button" outranks a single ".iconButton"
    class on specificity alone) so these overrides actually win. */
 .toolbar .iconButton {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
   background: var(--surface);
-  color: var(--muted);
+  color: var(--foreground);
   cursor: pointer;
 }
 
@@ -93,16 +94,17 @@
 /* Same square-icon treatment but with room for a short label (e.g. "CSV")
    -- used for the one toolbar action without a clean universal icon. */
 .toolbar .iconButtonLabeled {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  height: 34px;
-  padding: 0 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  gap: 0.4rem;
+  height: 42px;
+  padding: 0 0.85rem;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
   background: var(--surface);
   color: var(--foreground);
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -111,6 +113,41 @@
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+/* Custom tooltip instead of relying on the native title attribute --
+   native tooltips have a ~1s hover delay and small, inconsistently
+   styled text, which wasn't enough to tell some icon-only buttons apart
+   (e.g. "Zoom to bandwidth" vs "Reset zoom"). Reuses the data-tooltip
+   value set on each IconButton via CSS content: attr(), so no extra
+   markup is needed. */
+.toolbar .iconButton::after,
+.toolbar .iconButtonLabeled::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+  z-index: 30;
+}
+
+.toolbar .iconButton:hover::after,
+.toolbar .iconButtonLabeled:hover::after,
+.toolbar .iconButton:focus-visible::after,
+.toolbar .iconButtonLabeled:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
 }
 
 .chartTitle {

@@ -15,8 +15,8 @@ export default function IconButton({ icon, title, label, onClick }: Props) {
       type="button"
       className={label ? styles.iconButtonLabeled : styles.iconButton}
       onClick={onClick}
-      title={title}
       aria-label={title}
+      data-tooltip={title}
     >
       {icon}
       {label && <span>{label}</span>}
