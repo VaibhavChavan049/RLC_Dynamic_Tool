@@ -323,23 +323,6 @@ export default function Home() {
           <div className={styles.panel}>
             <div className={styles.panelTitle}>Circuit values</div>
 
-            <div className={styles.modeToggle}>
-              <button
-                className={mode === "manual" ? styles.active : undefined}
-                onClick={() => setMode("manual")}
-              >
-                Enter my own values
-              </button>
-              {/* Preset picker disabled for now, re-enable by uncommenting this button.
-              <button
-                className={mode === "preset" ? styles.active : undefined}
-                onClick={() => setMode("preset")}
-              >
-                Load a preset
-              </button>
-              */}
-            </div>
-
             {mode === "manual" ? (
               <>
                 <div className={styles.field}>

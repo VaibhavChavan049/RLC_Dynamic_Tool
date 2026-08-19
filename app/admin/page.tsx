@@ -65,7 +65,7 @@ export default function AdminPage() {
           <h1 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Change the site password</h1>
           <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.9rem" }}>
             This is the password visitors enter on the calculator&apos;s lock screen. Changing it here takes effect
-            immediately for everyone -- no code, no redeploy.
+            immediately for everyone i.e. no code, no redeploy.
           </p>
         </div>
 
