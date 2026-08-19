@@ -29,6 +29,16 @@ import { downloadCsv } from "@/lib/csv";
 import { makeTooltipHandler, type TooltipReadout as TooltipReadoutData } from "@/lib/chartTooltip";
 import TooltipReadout from "./TooltipReadout";
 import { useFullscreenToggle } from "./useFullscreenToggle";
+import IconButton from "./IconButton";
+import {
+  ZoomInIcon,
+  ZoomOutIcon,
+  ResetZoomIcon,
+  BandwidthTargetIcon,
+  FullscreenIcon,
+  ExitFullscreenIcon,
+  DownloadIcon,
+} from "./ToolbarIcons";
 import styles from "./ChartToolbar.module.css";
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, annotationPlugin, zoomPlugin);
@@ -293,16 +303,18 @@ export default function CurrentComparisonChart({ curves, f0, V, L, C, circuitTyp
         <Line ref={chartRef} data={data} options={options} />
       </div>
       <div className={styles.toolbar}>
-        <button type="button" onClick={zoomIn}>Zoom in</button>
-        <button type="button" onClick={zoomOut}>Zoom out</button>
-        <button type="button" onClick={zoomToBandwidth}>Zoom to bandwidth</button>
-        <button type="button" onClick={resetZoom}>Reset zoom</button>
+        <IconButton icon={<ZoomInIcon />} title="Zoom in" onClick={zoomIn} />
+        <IconButton icon={<ZoomOutIcon />} title="Zoom out" onClick={zoomOut} />
+        <IconButton icon={<BandwidthTargetIcon />} title="Zoom to bandwidth" onClick={zoomToBandwidth} />
+        <IconButton icon={<ResetZoomIcon />} title="Reset zoom" onClick={resetZoom} />
         {fullscreenSupported && (
-          <button type="button" onClick={toggleFullscreen}>
-            {isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
-          </button>
+          <IconButton
+            icon={isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
+            title={isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+            onClick={toggleFullscreen}
+          />
         )}
-        <button type="button" onClick={handleDownloadCsv}>Download CSV</button>
+        <IconButton icon={<DownloadIcon />} label="CSV" title="Download CSV" onClick={handleDownloadCsv} />
       </div>
     </div>
   );

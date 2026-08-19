@@ -65,6 +65,54 @@
   color: var(--accent);
 }
 
+/* Compact square icon buttons (Zoom in/out, Reset zoom, Zoom to
+   bandwidth, Fullscreen) instead of full text-label buttons -- selector
+   needs to be more specific than the plain ".toolbar button" rule above
+   (same source, but ".toolbar button" outranks a single ".iconButton"
+   class on specificity alone) so these overrides actually win. */
+.toolbar .iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.toolbar .iconButton:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Same square-icon treatment but with room for a short label (e.g. "CSV")
+   -- used for the one toolbar action without a clean universal icon. */
+.toolbar .iconButtonLabeled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 34px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toolbar .iconButtonLabeled:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .chartTitle {
   font-size: 1.05rem;
   font-weight: 700;
